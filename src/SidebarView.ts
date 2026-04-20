@@ -801,8 +801,6 @@ export class SidebarView implements vscode.WebviewViewProvider {
       case 'pasteImage': {
         const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
         if (!wsRoot) break;
-        const note = this.storage.getNote(msg.noteId);
-        if (!note) break;
         const ext      = msg.ext.replace(/[^a-z0-9]/gi, '').slice(0, 8) || 'png';
         const filename = `${msg.noteId}-${Date.now()}.${ext}`;
         const assetUri = vscode.Uri.joinPath(wsRoot, '.devnotes', 'assets', filename);
@@ -812,14 +810,9 @@ export class SidebarView implements vscode.WebviewViewProvider {
           );
         } catch { /* already exists */ }
         await vscode.workspace.fs.writeFile(assetUri, Buffer.from(msg.base64, 'base64'));
-        const newContent = note.content
-          ? `${note.content}\n![image](.devnotes/assets/${filename})`
-          : `![image](.devnotes/assets/${filename})`;
-        await this.storage.updateNote(msg.noteId, { content: newContent });
-        this.push();
-        if (EditorPanel.current?.noteId === msg.noteId) {
-          EditorPanel.current.push();
-        }
+        const storagePath = `.devnotes/assets/${filename}`;
+        const webviewUri  = this.view!.webview.asWebviewUri(assetUri).toString();
+        this.view!.webview.postMessage({ type: 'imageReady', noteId: msg.noteId, src: webviewUri, storagePath });
         break;
       }
 
@@ -2741,6 +2734,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
   let selectedIds        = [];
   let knownNoteIds       = null; // null on first load — skip highlight; Set afterwards
   let openColorPop    = null;
+  const pendingImageInsertions = new Map(); // noteId → { range, preview }
   let cardTagPickerCommit = null;
   let pendingCodeLinkCallback = null;
   let draftOutsideListener   = null;
@@ -3028,6 +3022,34 @@ export class SidebarView implements vscode.WebviewViewProvider {
     }
     if (msg.type === 'lucideSearchResults') {
       if (iconSearchResultsCb) iconSearchResultsCb(msg.icons);
+      return;
+    }
+    if (msg.type === 'imageReady') {
+      const pending = pendingImageInsertions.get(msg.noteId);
+      pendingImageInsertions.delete(msg.noteId);
+      if (pending) {
+        const imgEl = document.createElement('img');
+        imgEl.src = msg.src;
+        imgEl.alt = 'image';
+        imgEl.setAttribute('data-storage-path', msg.storagePath);
+        imgEl.style.cssText = 'max-width:100%;border-radius:4px;margin:4px 0;display:block;';
+        const { range, preview: targetPreview } = pending;
+        if (range && targetPreview.contentEditable === 'true') {
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+          range.deleteContents();
+          range.insertNode(imgEl);
+          const after = document.createRange();
+          after.setStartAfter(imgEl);
+          after.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(after);
+        } else {
+          targetPreview.appendChild(imgEl);
+        }
+        targetPreview.dispatchEvent(new Event('input'));
+      }
       return;
     }
     if (msg.type === 'init') {
@@ -4602,8 +4624,9 @@ export class SidebarView implements vscode.WebviewViewProvider {
       e.stopPropagation();
       const file = imageItem.getAsFile();
       if (!file) return;
-      // Blur first so the text content is saved to storage before we append the image
-      preview.blur();
+      const sel = window.getSelection();
+      const savedRange = sel?.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
+      pendingImageInsertions.set(note.id, { range: savedRange, preview });
       const ext = imageItem.type.split('/')[1]?.split('+')[0] ?? 'png';
       const reader = new FileReader();
       reader.onload = () => {
