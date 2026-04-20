@@ -28,6 +28,7 @@ import {
   PenLine, Shapes, Palette, Ban,
 } from 'lucide';
 import type { IconNode as LucideNode } from 'lucide';
+import * as AllLucide from 'lucide';
 
 // ─── Lucide icon helper ───────────────────────────────────────────────────────
 
@@ -43,40 +44,11 @@ function githubSvg(size = 14): string {
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.34-3.369-1.34-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>`;
 }
 
-// Ordered palette shown in the icon picker (coding-related icons only)
-const CODING_ICONS: [string, LucideNode][] = [
-  // Code / Syntax
-  ['Code',       Code],       ['Code2',      Code2],      ['Braces',     Braces],
-  ['Hash',       Hash],       ['Variable',   Variable],   ['Binary',     Binary],
-  ['Regex',      Regex],      ['SearchCode', SearchCode],
-  // Files
-  ['FileCode',   FileCode],   ['FileJson',   FileJson],   ['FileText',   FileText],
-  // Git
-  ['GitBranch',  GitBranch],  ['GitCommit',  GitCommit],  ['GitFork',    GitFork],
-  ['GitMerge',   GitMerge],   ['GitPullRequest', GitPullRequest],
-  // Infrastructure
-  ['Terminal',   Terminal],   ['Server',     Server],     ['Database',   Database],
-  ['Cloud',      Cloud],      ['Network',    Network],    ['Globe',      Globe],
-  ['Cpu',        Cpu],        ['HardDrive',  HardDrive],  ['Wifi',       Wifi],
-  ['Container',  Container],
-  // Dev Tools
-  ['Bug',        Bug],        ['Package',    Package],    ['Layers',     Layers],
-  ['Workflow',   Workflow],   ['Wrench',     Wrench],     ['Hammer',     Hammer],
-  ['Settings',   Settings],   ['Settings2',  Settings2],  ['Webhook',    Webhook],
-  ['Cable',      Cable],      ['Blocks',     Blocks],     ['Component',  Component],
-  // Security
-  ['Lock',       Lock],       ['Unlock',     Unlock],     ['Shield',     Shield],
-  ['ShieldCheck', ShieldCheck], ['Key',      Key],
-  // Other
-  ['Zap',        Zap],        ['Box',        Box],        ['Link',       Link],
-  ['Lightbulb',  Lightbulb],  ['BookOpen',   BookOpen],   ['BookMarked', BookMarked],
-];
 
-// Full map used server-side to resolve icon names → SVG (includes built-in defaults)
-const TAG_ICON_MAP: Record<string, LucideNode> = {
-  ...Object.fromEntries(CODING_ICONS),
-  ListTodo, Presentation, // built-in tag defaults not in the coding picker
-};
+// All Lucide icons available for user search — every array-valued export is an icon node
+const ALL_LUCIDE_NODES: Record<string, LucideNode> = Object.fromEntries(
+  Object.entries(AllLucide as Record<string, unknown>).filter(([, v]) => Array.isArray(v))
+) as Record<string, LucideNode>;
 
 // ─── Message types ────────────────────────────────────────────────────────────
 
@@ -97,6 +69,11 @@ type ToExt =
   | { type: 'deleteTag'; id: string }
   | { type: 'updateTag'; id: string; changes: Partial<Pick<Tag, 'label' | 'color'>> & { icon?: string | null } }
   | { type: 'removeCustomColor'; color: string }
+  | { type: 'hideDefaultColor'; color: string }
+  | { type: 'hideDefaultIcon'; name: string }
+  | { type: 'addSavedIcon'; name: string }
+  | { type: 'removeSavedIcon'; name: string }
+  | { type: 'searchLucideIcons'; query: string }
   | { type: 'jumpToLink'; file: string; line: number }
   | { type: 'linkToEditor'; noteId: string }
   | { type: 'removeCodeLink'; noteId: string }
@@ -277,11 +254,16 @@ export class SidebarView implements vscode.WebviewViewProvider {
       imageUriMap,
       tags              : this.storage.getTags().map(t => ({
         ...t,
-        iconSvg: t.icon && TAG_ICON_MAP[t.icon] ? svgIcon(TAG_ICON_MAP[t.icon], 11) : undefined,
+        iconSvg: t.icon && ALL_LUCIDE_NODES[t.icon] ? svgIcon(ALL_LUCIDE_NODES[t.icon], 11) : undefined,
       })),
       templates         : this.storage.getTemplates(),
       defaultTagIds     : DEFAULT_TAGS.map(t => t.id),
-      customColors      : this.storage.getCustomColors(),
+      customColors        : this.storage.getCustomColors(),
+      hiddenDefaultColors : this.storage.getHiddenDefaultColors(),
+      hiddenDefaultIcons  : this.storage.getHiddenDefaultIcons(),
+      savedIconSvgs       : this.storage.getSavedIcons()
+                            .filter(name => !!ALL_LUCIDE_NODES[name])
+                            .map(name => ({ name, svg: svgIcon(ALL_LUCIDE_NODES[name], 15) })),
       projectName       : this.projectName,
       currentBranch     : this.currentBranch     ?? null,
       currentUser       : this.currentUser       ?? null,
@@ -473,6 +455,42 @@ export class SidebarView implements vscode.WebviewViewProvider {
       case 'removeCustomColor': {
         await this.storage.removeCustomColor(msg.color);
         this.push();
+        break;
+      }
+
+      case 'hideDefaultColor': {
+        await this.storage.hideDefaultColor(msg.color);
+        this.push();
+        break;
+      }
+
+      case 'hideDefaultIcon': {
+        await this.storage.hideDefaultIcon(msg.name);
+        this.push();
+        break;
+      }
+
+      case 'addSavedIcon': {
+        await this.storage.addSavedIcon(msg.name);
+        this.push();
+        break;
+      }
+
+      case 'removeSavedIcon': {
+        await this.storage.removeSavedIcon(msg.name);
+        this.push();
+        break;
+      }
+
+      case 'searchLucideIcons': {
+        const q = msg.query.toLowerCase().trim();
+        const icons = q
+          ? Object.keys(ALL_LUCIDE_NODES)
+              .filter(n => n.toLowerCase().includes(q))
+              .slice(0, 30)
+              .map(name => ({ name, svg: svgIcon(ALL_LUCIDE_NODES[name], 15) }))
+          : [];
+        this.view?.webview.postMessage({ type: 'lucideSearchResults', icons });
         break;
       }
 
@@ -813,8 +831,10 @@ export class SidebarView implements vscode.WebviewViewProvider {
   private buildHtml(webview: vscode.Webview): string {
     const nonce             = getNonce();
     const colorsJson        = JSON.stringify(NOTE_COLORS);
-    const tagIconPaletteJson = JSON.stringify(
-      CODING_ICONS.map(([name, node]) => ({ name, svg: svgIcon(node, 15) }))
+    const defaultTagIconsJson = JSON.stringify(
+      ['Lightbulb', 'ListTodo', 'Bug', 'Presentation', 'BookMarked']
+        .filter(n => !!ALL_LUCIDE_NODES[n])
+        .map(name => ({ name, svg: svgIcon(ALL_LUCIDE_NODES[name], 15) }))
     );
     const sidebarEditorUri  = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'media', 'sidebar-editor.js')
@@ -884,8 +904,9 @@ export class SidebarView implements vscode.WebviewViewProvider {
       popRename:     JSON.stringify(svgIcon(PenLine,         10)),
       popIcon:       JSON.stringify(svgIcon(Shapes,          10)),
       popColor:      JSON.stringify(svgIcon(Palette,         10)),
-      popDelete:     JSON.stringify(svgIcon(Trash2,          10)),
+      popDelete:     JSON.stringify(svgIcon(Trash2,          14)),
       popNone:       JSON.stringify(svgIcon(Ban,             13)),
+      newTag:        JSON.stringify(svgIcon(TagIcon,         13)),
       ghIssue:       JSON.stringify(svgIcon(CircleDot,       14)),
       ghPr:          JSON.stringify(svgIcon(GitPullRequest,  14)),
     };
@@ -1098,7 +1119,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
   .ovf-item.active .ovf-label { font-weight: 600; }
   .ovf-divider { border: none; border-top: 1px solid var(--vscode-panel-border); margin: 4px 0; }
   .ovf-item.danger       { color: ${C.danger}; }
-  .ovf-item.danger:hover { background: rgba(${RGB.danger},.12); }
+  .ovf-item.danger:hover { background: none; }
   .ovf-item.confirm      { color: ${C.danger}; font-weight: 600; }
 
   .overflow-btn.open   { opacity: 1; background: var(--vscode-toolbar-hoverBackground); }
@@ -1179,6 +1200,26 @@ export class SidebarView implements vscode.WebviewViewProvider {
   .tag-chip.all.active { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border-color: transparent; }
   .tag-chip.dragging  { opacity: .35; }
   .tag-chip.drag-over { outline: 2px solid currentColor; outline-offset: 2px; }
+  .color-swatch.default-swatch {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; line-height: 1;
+    color: var(--vscode-editor-background, #1e1e1e);
+  }
+  .tag-chip.default-color {
+    background: color-mix(in srgb, var(--vscode-foreground) 15%, transparent);
+    border-color: color-mix(in srgb, var(--vscode-foreground) 45%, transparent);
+    color: var(--vscode-foreground);
+  }
+  .tag-chip.default-color.active {
+    background: var(--vscode-foreground);
+    border-color: rgba(0,0,0,.2);
+    color: var(--vscode-editor-background, #1e1e1e);
+  }
+  .tag-pill.default-color {
+    background: color-mix(in srgb, var(--vscode-foreground) 15%, transparent);
+    border-color: color-mix(in srgb, var(--vscode-foreground) 45%, transparent);
+    color: var(--vscode-foreground);
+  }
 
   .tag-chip-color-pop {
     display: none;
@@ -1188,32 +1229,68 @@ export class SidebarView implements vscode.WebviewViewProvider {
     border-radius: 6px;
     padding: 8px;
     flex-direction: column;
-    gap: 6px;
-    width: 188px;
+    gap: 4px;
+    width: 200px;
     z-index: 200;
     box-shadow: 0 4px 16px rgba(0,0,0,.2);
   }
   .tag-chip-color-pop.open { display: flex; }
+
+  /* Shared 7-column grid for Icon and Color rows — ensures identical columns and gap */
+  .tag-chip-color-pop .tag-chip-swatches,
+  .tag-chip-color-pop .tag-icon-picker {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+  }
+  .tag-chip-color-pop .tag-icon-picker { padding-top: 5px; overflow: visible; }
+
   .tag-chip-swatches { display: flex; flex-wrap: wrap; gap: 5px; }
-  .tag-chip-color-pop .tag-chip-swatches { gap: 3px; }
   .tag-chip-color-pop .color-swatch {
-    width: 22px; height: 22px; border-radius: 4px;
-    box-shadow: none; flex-shrink: 0;
+    width: 100%; height: 24px; border-radius: 6px;
+    box-shadow: none;
   }
   .tag-chip-color-pop .color-swatch:hover { transform: none; filter: brightness(1.1); }
   .tag-chip-color-pop .color-swatch.selected {
     border-color: rgba(255,255,255,.9);
     box-shadow: 0 0 0 1.5px var(--vscode-focusBorder);
   }
+  /* Icon swatches and their wrappers fill their grid cell */
+  .tag-chip-color-pop .tag-icon-picker .custom-swatch-wrap,
+  .tag-chip-color-pop .tag-icon-picker .tag-icon-swatch,
+  .tag-chip-color-pop .my-icons-results .tag-icon-swatch { width: 100%; }
+  /* "+" buttons fill their grid cell like swatches */
+  .tag-chip-color-pop .tag-chip-color-custom-btn {
+    width: 100%; height: 24px; padding: 0; border-radius: 6px;
+    font-size: 14px; display: flex; align-items: center; justify-content: center;
+  }
+  /* Delete button aligns with grids/inputs — strip ovf-item's own horizontal padding */
+  .tag-chip-color-pop .ovf-item { padding-left: 0; padding-right: 0; justify-content: center; }
+  /* Inputs match swatch height */
+  .tag-chip-color-pop .tag-chip-pop-input { height: 24px; padding-top: 0; padding-bottom: 0; }
+
   .tag-chip-color-custom-btn {
     font-size: 11px; padding: 2px 6px; border-radius: 20px;
     background: none; border: 1.5px dashed var(--vscode-panel-border);
     color: var(--vscode-descriptionForeground); cursor: pointer; flex-shrink: 0;
   }
   .tag-chip-color-custom-btn:hover { border-color: var(--vscode-foreground); color: var(--vscode-foreground); }
-  .tag-chip-color-custom-btn.active { border-style: solid; border-color: var(--vscode-focusBorder); color: var(--vscode-foreground); }
-  .tag-chip-hex-wrap { display: none; align-items: center; gap: 6px; margin-top: 4px; }
-  .tag-chip-hex-wrap.open { display: flex; }
+  .tag-chip-color-custom-btn.active { border-style: solid; border-color: var(--vscode-focusBorder); color: var(--vscode-focusBorder); }
+  .tag-chip-hex-wrap { display: flex; align-items: center; gap: 6px; }
+  .color-picker-wrap { display: none; flex-direction: column; gap: 6px; }
+  .color-picker-wrap.open { display: flex; }
+  .color-picker-canvas { width: 100%; border-radius: 4px; cursor: crosshair; display: block; }
+  .color-picker-hue {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 10px; border-radius: 5px; outline: none; cursor: pointer; border: none;
+    background: linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);
+  }
+  .color-picker-hue::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #fff; border: 2px solid rgba(0,0,0,.35); cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  }
   .custom-swatch-wrap { position: relative; display: inline-flex; flex-shrink: 0; }
   .custom-swatch-del {
     position: absolute; top: -4px; right: -4px;
@@ -1223,15 +1300,9 @@ export class SidebarView implements vscode.WebviewViewProvider {
     display: none; align-items: center; justify-content: center; padding: 0; z-index: 1;
   }
   .custom-swatch-wrap:hover .custom-swatch-del { display: flex; }
-  .tag-chip-pop-sep { height: 1px; background: var(--vscode-panel-border); margin: 6px -8px; }
+  .tag-chip-pop-sep { height: 1px; background: var(--vscode-panel-border); margin: 8px -8px; opacity: .6; }
   .tag-chip-pop-danger-sep {
-    height: 1px; background: var(--vscode-panel-border); margin: 8px -8px 2px;
-  }
-  .tag-chip-pop-label {
-    display: flex; align-items: center; gap: 4px;
-    font-size: 10px; font-weight: 600; letter-spacing: .04em;
-    color: var(--vscode-descriptionForeground); opacity: .8;
-    margin-bottom: 3px;
+    height: 1px; background: var(--vscode-panel-border); margin: 10px -8px 4px; opacity: .6;
   }
   .tag-icon-picker {
     display: flex; flex-wrap: wrap; gap: 3px;
@@ -1240,21 +1311,24 @@ export class SidebarView implements vscode.WebviewViewProvider {
   }
   .tag-icon-picker::-webkit-scrollbar { display: none; }
   .tag-icon-swatch {
-    width: 24px; height: 24px;
+    width: 24px; height: 24px; box-sizing: border-box;
     display: inline-flex; align-items: center; justify-content: center;
-    border-radius: 4px; cursor: pointer; border: 1px solid transparent;
+    border-radius: 6px; cursor: pointer; border: 1px solid rgba(255,255,255,.15);
     background: transparent; color: var(--vscode-foreground); opacity: .65;
   }
   .tag-icon-swatch:hover { opacity: 1; background: var(--vscode-toolbar-hoverBackground); }
   .tag-icon-swatch.selected { opacity: 1; border-color: var(--vscode-focusBorder); background: var(--vscode-toolbar-activeBackground); }
   .tag-icon-swatch.none-swatch { opacity: .45; }
-  .tag-chip-hex-dot { width: 13px; height: 13px; border-radius: 3px; flex-shrink: 0; border: 1px solid rgba(0,0,0,.2); }
+  .tag-icon-swatch.none-swatch.selected { border-color: rgba(255,255,255,.15); background: var(--vscode-toolbar-activeBackground); opacity: .65; }
+  .tag-icon-swatch.saved { opacity: .3; }
+  .tag-icon-swatch.saved:hover { opacity: .6; }
+  .tag-chip-hex-dot { width: 24px; height: 24px; border-radius: 6px; flex-shrink: 0; border: 1px solid rgba(0,0,0,.2); }
   .tag-chip-hex-wrap .tag-chip-pop-input { flex: 1; }
   .tag-form-icon-picker {
     display: flex; flex-wrap: wrap; gap: 3px;
-    max-height: 72px; overflow-y: auto;
-    padding: 2px 0;
+    max-height: 120px; overflow-y: auto; padding: 2px 0; scrollbar-width: none;
   }
+  .tag-form-icon-picker::-webkit-scrollbar { display: none; }
   .tag-chip-pop-input {
     width: 100%;
     box-sizing: border-box;
@@ -1269,20 +1343,22 @@ export class SidebarView implements vscode.WebviewViewProvider {
   }
   .tag-chip-pop-input:focus { border-color: var(--vscode-focusBorder); }
 
-  .tag-chip-pop-del {
-    width: 100%;
-    margin-top: 2px;
-    padding: 3px 6px;
-    font-size: 11px;
-    display: flex; align-items: center; gap: 5px;
-    cursor: pointer;
-    border: none;
-    border-radius: 3px;
-    background: transparent;
-    color: ${C.danger};
+  .my-icons-search-wrap { display: flex; flex-direction: column; gap: 4px; margin-top: 2px; }
+  .my-icons-results {
+    display: flex; flex-wrap: wrap; gap: 3px;
+    max-height: 72px; overflow-y: auto; padding: 1px 0;
+    scrollbar-width: none;
   }
-  .tag-chip-pop-del:hover { background: rgba(${RGB.danger},.12); }
-  .tag-chip-pop-del.confirming { background: rgba(${RGB.danger},.18); font-weight: 600; }
+  .tag-chip-color-pop .my-icons-results {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+  }
+  .my-icons-results::-webkit-scrollbar { display: none; }
+  .my-icons-empty {
+    grid-column: 1 / -1;
+    font-size: 10px; color: var(--vscode-descriptionForeground);
+    padding: 3px 0; opacity: .7;
+  }
+
 
   .add-tag-btn {
     font-size: 11px;
@@ -1426,7 +1502,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
   .color-swatch {
     width: 26px; height: 26px;
     border-radius: 50%;
-    border: 2px solid rgba(255,255,255,.6);
+    border: 2px solid transparent;
     cursor: pointer;
     transition: transform .12s;
     box-shadow: 0 1px 4px rgba(0,0,0,.18);
@@ -1854,8 +1930,16 @@ export class SidebarView implements vscode.WebviewViewProvider {
 
   .color-strip {
     display: flex;
-    gap: 6px;
+    gap: 3px;
     flex-wrap: wrap;
+  }
+  .color-strip .color-swatch {
+    width: 24px; height: 24px; box-sizing: border-box; border-radius: 6px; box-shadow: none;
+  }
+  .color-strip .color-swatch:hover { transform: none; filter: brightness(1.1); }
+  .color-strip .color-swatch.selected {
+    border-color: var(--vscode-focusBorder);
+    box-shadow: none;
   }
 
   .new-note-tags {
@@ -1878,15 +1962,45 @@ export class SidebarView implements vscode.WebviewViewProvider {
   .btn-ghost   { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
 
   /* ── Add tag form ────────────────────────────────────── */
+  .add-tag-form-title {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600;
+    color: var(--vscode-foreground); opacity: .85;
+  }
+  .add-tag-form-title-icon {
+    display: inline-flex; align-items: center; opacity: .7;
+  }
+  .add-tag-form-close {
+    margin-left: auto;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; padding: 0;
+    background: none; border: none; border-radius: 4px;
+    color: var(--vscode-foreground); opacity: .5; cursor: pointer;
+  }
+  .add-tag-form-close:hover { opacity: 1; background: var(--vscode-toolbar-hoverBackground); }
+  .add-tag-form-sep {
+    height: 1px; background: rgba(255,255,255,.08); margin: 0 -10px;
+  }
+  .add-tag-form-section-label {
+    margin: 4px 0 0; font-size: 10px; font-weight: 600; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--vscode-foreground); opacity: .4;
+  }
+  .add-tag-form-footer {
+    display: flex; justify-content: flex-end;
+  }
+  .add-tag-form-footer .btn-primary:disabled {
+    opacity: .35 !important; cursor: not-allowed; pointer-events: none;
+  }
   .add-tag-form {
     display: none;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     padding: 8px 10px;
     border-top: 1px solid var(--vscode-panel-border);
     flex-shrink: 0;
   }
   .add-tag-form.open { display: flex; }
+  .tag-label-wrap { position: relative; width: 100%; }
   .add-tag-form input {
     background: var(--vscode-input-background);
     border: 1px solid var(--vscode-panel-border);
@@ -1896,7 +2010,17 @@ export class SidebarView implements vscode.WebviewViewProvider {
     outline: none;
     font-size: 12px;
     width: 100%;
+    box-sizing: border-box;
   }
+  .tag-label-wrap input { padding-right: 48px; }
+  .tag-label-counter {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    font-size: 9px; color: var(--vscode-foreground); opacity: 0;
+    pointer-events: none; transition: opacity .15s;
+    border: 1px solid currentColor; border-radius: 20px; padding: 1px 4px;
+  }
+  .tag-label-counter.visible { opacity: .35; }
+  .tag-label-counter.near-limit { opacity: 1; color: ${C.danger}; }
 
   /* ── Selection mode ─────────────────────────────────── */
   .select-mode .card { cursor: pointer; user-select: none; }
@@ -2546,12 +2670,22 @@ export class SidebarView implements vscode.WebviewViewProvider {
 
 <!-- ── Add tag form ── -->
 <div class="add-tag-form" id="add-tag-form">
-  <input id="tag-label" type="text" placeholder="Tag name…" maxlength="24">
-  <div class="color-strip" id="tag-colors"></div>
+  <div class="add-tag-form-title">
+    <span class="add-tag-form-title-icon">${svgIcon(TagIcon, 13)}</span>New Tag
+    <button class="add-tag-form-close" id="btn-cancel-tag" title="Cancel">${svgIcon(X, 13)}</button>
+  </div>
+  <div class="add-tag-form-sep"></div>
+  <p class="add-tag-form-section-label">Tag Name</p>
+  <div class="tag-label-wrap">
+    <input id="tag-label" type="text" placeholder="Enter tag name" maxlength="24">
+    <span class="tag-label-counter" id="tag-label-counter">0/24</span>
+  </div>
+  <p class="add-tag-form-section-label">Select Icon</p>
   <div class="tag-form-icon-picker" id="tag-icon-picker"></div>
-  <div class="form-actions">
-    <button class="btn btn-ghost" id="btn-cancel-tag">Cancel</button>
-    <button class="btn btn-primary" id="btn-confirm-tag">Add Tag</button>
+  <p class="add-tag-form-section-label">Select Color</p>
+  <div class="color-strip" id="tag-colors"></div>
+  <div class="add-tag-form-footer">
+    <button class="btn btn-primary" id="btn-confirm-tag" disabled>Add Tag</button>
   </div>
 </div>
 
@@ -2574,7 +2708,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
   const vscode = acquireVsCodeApi();
   const COLORS          = ${colorsJson};
   const COLOR_KEYS      = Object.keys(COLORS);
-  const TAG_ICON_PALETTE = ${tagIconPaletteJson};
+  const DEFAULT_TAG_ICONS = ${defaultTagIconsJson};
   const EMPTY_GIFS = ${JSON.stringify(emptyGifs)};
 
   let notes             = [];
@@ -2582,12 +2716,16 @@ export class SidebarView implements vscode.WebviewViewProvider {
   let imageUriMap       = {};
   let templates         = [];
   let defaultTagIds     = [];
-  let customColors      = [];
+  let customColors        = [];
+  let hiddenDefaultColors = [];
+  let hiddenDefaultIcons  = [];
+  let savedIconSvgs       = [];
+  let iconSearchResultsCb  = null;
   let activeTagIds      = [];
   let searchQuery       = '';
   let newTags           = [];
   let newTemplateId     = null;
-  let tagColor          = '${NC.blue}';
+  let tagColor          = 'default';
   let tagIcon           = null;
   let currentBranch      = null;
   let currentUser        = null;
@@ -2611,6 +2749,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
   const projectName    = document.getElementById('project-name');
   projectName.addEventListener('click', () => vscode.postMessage({ type: 'openFolder' }));
   const cardList       = document.getElementById('card-list');
+  cardList.addEventListener('scroll', () => { if (cardOvfMenu?.classList.contains('open')) closeAllPops(); }, { passive: true });
   const tagBar         = document.getElementById('tag-bar');
   const searchEl       = document.getElementById('search');
   const searchClearEl  = document.getElementById('search-clear');
@@ -2887,6 +3026,10 @@ export class SidebarView implements vscode.WebviewViewProvider {
       }
       return;
     }
+    if (msg.type === 'lucideSearchResults') {
+      if (iconSearchResultsCb) iconSearchResultsCb(msg.icons);
+      return;
+    }
     if (msg.type === 'init') {
       const incomingIds = new Set((msg.notes ?? []).map(n => n.id));
       const addedId     = knownNoteIds !== null
@@ -2898,7 +3041,10 @@ export class SidebarView implements vscode.WebviewViewProvider {
       tags          = msg.tags          ?? [];
       templates     = msg.templates     ?? [];
       defaultTagIds = msg.defaultTagIds ?? [];
-      customColors  = msg.customColors  ?? [];
+      customColors        = msg.customColors        ?? [];
+      hiddenDefaultColors = msg.hiddenDefaultColors ?? [];
+      hiddenDefaultIcons  = msg.hiddenDefaultIcons  ?? [];
+      savedIconSvgs       = msg.savedIconSvgs       ?? [];
       imageUriMap   = msg.imageUriMap   ?? {};
       currentBranch     = msg.currentBranch     ?? null;
       currentUser       = msg.currentUser       ?? null;
@@ -2931,9 +3077,9 @@ export class SidebarView implements vscode.WebviewViewProvider {
       }
       renderNewNoteTags();
       renderCardTemplatePicker();
-      buildColorStrip(tagColorsEl, c => { tagColor = c; highlightSwatch(tagColorsEl, c); });
+      buildColorStrip(tagColorsEl, c => { tagColor = c; highlightSwatch(tagColorsEl, c); updateConfirmBtn(); });
       highlightSwatch(tagColorsEl, tagColor);
-      buildFormIconPicker();
+      if (addTagForm.classList.contains('open')) buildFormIconPicker();
     }
 
   });
@@ -3038,11 +3184,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
         const isActive = draftTags.includes(chip.dataset.tid);
         chip.classList.toggle('active', isActive);
         const tag = tags.find(t => t.id === chip.dataset.tid);
-        if (tag) {
-          chip.style.background = isActive ? tag.color : hexToRgba(tag.color, 0.18);
-          chip.style.borderColor = isActive ? 'rgba(0,0,0,0.25)' : tag.color;
-          chip.style.color = isActive ? '${C.text}' : tag.color;
-        }
+        if (tag) applyChipStyle(chip, tag.color, isActive);
       });
     }
 
@@ -3052,9 +3194,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
         const tag = tags.find(t => t.id === tid);
         if (!tag) return;
         const pill = mkEl('span', 'tag-pill');
-        pill.style.background = hexToRgba(tag.color, 0.18);
-        pill.style.borderColor = tag.color;
-        pill.style.color = tag.color;
+        applyPillStyle(pill, tag.color);
         if (tag.iconSvg) { const ico = mkEl('span', 'tag-icon'); ico.innerHTML = tag.iconSvg; pill.appendChild(ico); }
         pill.appendChild(mkEl('span', '', tag.label));
         pillsArea.appendChild(pill);
@@ -3328,9 +3468,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
       chip.type = 'button';
       if (tag.iconSvg) { const ico = mkEl('span', 'tag-icon'); ico.innerHTML = tag.iconSvg; chip.appendChild(ico); }
       chip.appendChild(mkEl('span', '', tag.label));
-      chip.style.background = isActiveNew ? tag.color : hexToRgba(tag.color, 0.18);
-      chip.style.borderColor = isActiveNew ? 'rgba(0,0,0,0.25)' : tag.color;
-      chip.style.color = isActiveNew ? '${C.text}' : tag.color;
+      applyChipStyle(chip, tag.color, isActiveNew);
       chip.addEventListener('click', () => {
         newTags = newTags.includes(tag.id)
           ? newTags.filter(id => id !== tag.id)
@@ -3367,6 +3505,11 @@ export class SidebarView implements vscode.WebviewViewProvider {
   let draggedTagId = null;
 
   function renderTagBar() {
+    const openPop = document.querySelector('.tag-chip-color-pop.open');
+    const savedPop = openPop ? {
+      tagId:      openPop.dataset.tagId,
+      pickerOpen: openPop.dataset.pickerOpen === '1'
+    } : null;
     document.querySelectorAll('.tag-chip-color-pop').forEach(p => p.remove());
     tagBar.innerHTML = '';
 
@@ -3379,96 +3522,243 @@ export class SidebarView implements vscode.WebviewViewProvider {
 
       const isActiveFilter = activeTagIds.includes(tag.id);
       const chip = mkEl('button', 'tag-chip' + (isActiveFilter ? ' active' : ''));
-      chip.style.background = isActiveFilter ? tag.color : hexToRgba(tag.color, 0.18);
-      chip.style.borderColor = isActiveFilter ? 'rgba(0,0,0,0.25)' : tag.color;
-      chip.style.color = isActiveFilter ? '${C.text}' : tag.color;
+      applyChipStyle(chip, tag.color, isActiveFilter);
       if (tag.iconSvg) { const ico = mkEl('span', 'tag-icon'); ico.innerHTML = tag.iconSvg; chip.appendChild(ico); }
       const labelSpan = mkEl('span', 'tag-chip-label', tag.label);
       chip.appendChild(labelSpan);
 
       // ── Right-click context popup (all tags) ─────────────────────────
       const colorPop = mkEl('div', 'tag-chip-color-pop');
+      colorPop.dataset.tagId = tag.id;
+      colorPop.addEventListener('click', e => e.stopPropagation());
 
-      // ── 1. Rename (custom tags only) ──────────────────────────────
-      if (!isDefault) {
-        colorPop.appendChild(mkPopLabel(${jsSvg.popRename}, 'Rename'));
-        const renameInput = document.createElement('input');
-        renameInput.type = 'text';
-        renameInput.className = 'tag-chip-pop-input';
-        renameInput.value = tag.label;
-        renameInput.maxLength = 24;
-        renameInput.addEventListener('click', e => e.stopPropagation());
-        renameInput.addEventListener('keydown', e => {
-          e.stopPropagation();
-          if (e.key === 'Enter') {
-            const newLabel = renameInput.value.trim();
-            colorPop.classList.remove('open');
-            if (newLabel && newLabel !== tag.label) {
-              vscode.postMessage({ type: 'updateTag', id: tag.id, changes: { label: newLabel } });
-            }
+      // ── 1. Rename ─────────────────────────────────────────────────
+      const renameWrap = mkEl('div', 'tag-label-wrap');
+      const renameInput = document.createElement('input');
+      renameInput.type = 'text';
+      renameInput.className = 'tag-chip-pop-input';
+      renameInput.value = tag.label;
+      renameInput.placeholder = 'Enter tag name';
+      renameInput.maxLength = 24;
+      const renameCounter = mkEl('span', 'tag-label-counter' + (tag.label.length > 0 ? ' visible' : '') + (tag.label.length >= 20 ? ' near-limit' : ''));
+      renameCounter.textContent = tag.label.length + '/24';
+      renameInput.addEventListener('click', e => e.stopPropagation());
+      renameInput.addEventListener('input', e => {
+        const len = renameInput.value.length;
+        renameCounter.textContent = len + '/24';
+        renameCounter.classList.toggle('visible', len > 0);
+        renameCounter.classList.toggle('near-limit', len >= 20);
+      });
+      renameInput.addEventListener('keydown', e => {
+        e.stopPropagation();
+        if (e.key === 'Enter') {
+          const newLabel = renameInput.value.trim();
+          colorPop.classList.remove('open');
+          if (newLabel && newLabel !== tag.label) {
+            vscode.postMessage({ type: 'updateTag', id: tag.id, changes: { label: newLabel } });
           }
-          if (e.key === 'Escape') colorPop.classList.remove('open');
-        });
-        colorPop.appendChild(renameInput);
-        colorPop.appendChild(mkEl('div', 'tag-chip-pop-sep'));
-      }
+        }
+        if (e.key === 'Escape') colorPop.classList.remove('open');
+      });
+      renameWrap.appendChild(renameInput);
+      renameWrap.appendChild(renameCounter);
+      colorPop.appendChild(renameWrap);
+      colorPop.appendChild(mkEl('div', 'tag-chip-pop-sep'));
 
       // ── 2. Icon ───────────────────────────────────────────────────
-      colorPop.appendChild(mkPopLabel(${jsSvg.popIcon}, 'Icon'));
       const iconGrid = mkEl('div', 'tag-icon-picker');
       const noneSw = mkEl('button', 'tag-icon-swatch none-swatch' + (!tag.icon ? ' selected' : ''));
-      noneSw.type = 'button';
-      noneSw.title = 'No icon';
-      noneSw.innerHTML = ${jsSvg.popNone};
+      noneSw.type = 'button'; noneSw.title = 'No icon'; noneSw.innerHTML = ${jsSvg.popNone};
       noneSw.addEventListener('click', e => {
         e.stopPropagation();
-        colorPop.classList.remove('open');
         if (tag.icon) vscode.postMessage({ type: 'updateTag', id: tag.id, changes: { icon: null } });
       });
       iconGrid.appendChild(noneSw);
-      TAG_ICON_PALETTE.forEach(entry => {
+      DEFAULT_TAG_ICONS.filter(e => !hiddenDefaultIcons.includes(e.name)).forEach(entry => {
+        const wrap = mkEl('div', 'custom-swatch-wrap');
         const sw = mkEl('button', 'tag-icon-swatch' + (tag.icon === entry.name ? ' selected' : ''));
-        sw.type = 'button';
-        sw.title = entry.name;
-        sw.innerHTML = entry.svg;
+        sw.type = 'button'; sw.title = entry.name; sw.innerHTML = entry.svg;
         sw.addEventListener('click', e => {
           e.stopPropagation();
-          colorPop.classList.remove('open');
           if (tag.icon !== entry.name) vscode.postMessage({ type: 'updateTag', id: tag.id, changes: { icon: entry.name } });
         });
-        iconGrid.appendChild(sw);
+        const swDel = mkEl('button', 'custom-swatch-del');
+        swDel.type = 'button'; swDel.title = 'Hide icon'; swDel.textContent = '×';
+        swDel.addEventListener('click', e => {
+          e.stopPropagation();
+          vscode.postMessage({ type: 'hideDefaultIcon', name: entry.name });
+        });
+        wrap.appendChild(sw); wrap.appendChild(swDel); iconGrid.appendChild(wrap);
       });
+
+      savedIconSvgs.forEach(({ name, svg }) => {
+        iconGrid.appendChild(mkSavedIconSwatch(name, svg, tag.icon === name, () => {
+          if (tag.icon !== name) vscode.postMessage({ type: 'updateTag', id: tag.id, changes: { icon: name } });
+        }));
+      });
+
+      const iconAddBtn = mkEl('button', 'tag-chip-color-custom-btn');
+      iconAddBtn.type = 'button'; iconAddBtn.title = 'Add icon'; iconAddBtn.textContent = '+';
+      iconGrid.appendChild(iconAddBtn);
       colorPop.appendChild(iconGrid);
+
+      // Search panel (hidden until + clicked)
+      const iconSearchWrap = mkEl('div', 'my-icons-search-wrap');
+      iconSearchWrap.style.display = 'none';
+      const iconSearchInput = document.createElement('input');
+      iconSearchInput.type = 'text'; iconSearchInput.className = 'tag-chip-pop-input';
+      iconSearchInput.placeholder = 'Search Lucide icons…'; iconSearchInput.spellcheck = false;
+      iconSearchInput.addEventListener('click', e => e.stopPropagation());
+      let iconSearchTimer = null;
+      iconSearchInput.addEventListener('input', () => {
+        clearTimeout(iconSearchTimer);
+        iconSearchTimer = setTimeout(() => {
+          vscode.postMessage({ type: 'searchLucideIcons', query: iconSearchInput.value.trim() });
+        }, 150);
+      });
+      iconSearchInput.addEventListener('keydown', e => {
+        e.stopPropagation();
+        if (e.key === 'Escape') closeIconSearch();
+      });
+      const iconSearchResults = mkEl('div', 'my-icons-results');
+      iconSearchWrap.appendChild(iconSearchInput);
+      iconSearchWrap.appendChild(iconSearchResults);
+      colorPop.appendChild(iconSearchWrap);
+
+      function closeIconSearch() {
+        iconAddBtn.classList.remove('active');
+        iconSearchWrap.style.display = 'none';
+        iconSearchInput.value = ''; iconSearchResults.innerHTML = '';
+        iconSearchResultsCb = null;
+      }
+
+      iconAddBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        const opening = iconSearchWrap.style.display === 'none';
+        if (opening) {
+          iconAddBtn.classList.add('active');
+          iconSearchWrap.style.display = '';
+          iconSearchResultsCb = icons => {
+            iconSearchResults.innerHTML = '';
+            if (icons.length === 0 && iconSearchInput.value.trim()) {
+              iconSearchResults.appendChild(mkEl('div', 'my-icons-empty', 'No icons found'));
+              return;
+            }
+            icons.forEach(({ name, svg }) => {
+              const alreadySaved = savedIconSvgs.some(s => s.name === name);
+              const sw = mkEl('button', 'tag-icon-swatch' + (tag.icon === name ? ' selected' : alreadySaved ? ' saved' : ''));
+              sw.type = 'button'; sw.title = alreadySaved ? name + ' (already saved)' : name; sw.innerHTML = svg;
+              sw.addEventListener('click', e => {
+                e.stopPropagation();
+                vscode.postMessage({ type: 'addSavedIcon', name });
+                if (tag.icon !== name) vscode.postMessage({ type: 'updateTag', id: tag.id, changes: { icon: name } });
+              });
+              iconSearchResults.appendChild(sw);
+            });
+          };
+          setTimeout(() => iconSearchInput.focus(), 0);
+        } else {
+          closeIconSearch();
+        }
+      });
+
       colorPop.appendChild(mkEl('div', 'tag-chip-pop-sep'));
 
       // ── 3. Color ──────────────────────────────────────────────────
-      colorPop.appendChild(mkPopLabel(${jsSvg.popColor}, 'Color'));
       const isCustomColor = !COLOR_KEYS.some(k => COLORS[k] === tag.color);
 
-      // Hex wrap (built first so swatch handlers can reference it)
-      const hexWrap = mkEl('div', 'tag-chip-hex-wrap' + (isCustomColor ? ' open' : ''));
-      const hexDot  = mkEl('div', 'tag-chip-hex-dot');
-      hexDot.style.background = tag.color || '#888';
+      // HSV state (shared between canvas picker, hue slider, hex input, and palette clicks)
+      let [pickerH, pickerS, pickerV] = (tag.color && /^#[0-9a-fA-F]{6}$/.test(tag.color))
+        ? hexToHsv(tag.color) : [0, 0, 80];
+
+      // Hex row (dot + input) — lives inside the custom picker wrap
+      const hexDot = mkEl('div', 'tag-chip-hex-dot');
+      hexDot.style.background = (tag.color && tag.color[0] === '#') ? tag.color : 'var(--vscode-foreground)';
       const hexInput = document.createElement('input');
-      hexInput.type = 'text';
-      hexInput.className = 'tag-chip-pop-input';
-      hexInput.placeholder = '#rrggbb';
-      hexInput.maxLength = 8;
+      hexInput.type = 'text'; hexInput.className = 'tag-chip-pop-input';
+      hexInput.placeholder = '#rrggbb'; hexInput.maxLength = 8;
       hexInput.value = tag.color && tag.color[0] === '#' ? tag.color : '';
       hexInput.addEventListener('click', e => e.stopPropagation());
+
+      // Canvas SV picker
+      const pickerCanvas = document.createElement('canvas');
+      pickerCanvas.className = 'color-picker-canvas';
+      pickerCanvas.width = 176; pickerCanvas.height = 100;
+
+      function drawPickerCanvas() {
+        const ctx = pickerCanvas.getContext('2d');
+        const w = pickerCanvas.width, h = pickerCanvas.height;
+        const gH = ctx.createLinearGradient(0,0,w,0);
+        gH.addColorStop(0, '#fff'); gH.addColorStop(1, \`hsl(\${pickerH},100%,50%)\`);
+        ctx.fillStyle = gH; ctx.fillRect(0,0,w,h);
+        const gV = ctx.createLinearGradient(0,0,0,h);
+        gV.addColorStop(0, 'rgba(0,0,0,0)'); gV.addColorStop(1, '#000');
+        ctx.fillStyle = gV; ctx.fillRect(0,0,w,h);
+        const cx = pickerS/100*w, cy = (1-pickerV/100)*h;
+        ctx.beginPath(); ctx.arc(cx,cy,5,0,Math.PI*2);
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx,cy,5,0,Math.PI*2);
+        ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = 1; ctx.stroke();
+      }
+      pickerCanvas._draw = drawPickerCanvas;
+
+      function applyPickerColor(save) {
+        const hex = hsvToHex(pickerH, pickerS, pickerV);
+        hexDot.style.background = hex; hexInput.value = hex;
+        if (save) vscode.postMessage({ type: 'updateTag', id: tag.id, changes: { color: hex } });
+      }
+
+      function canvasPos(e) {
+        const r = pickerCanvas.getBoundingClientRect();
+        return [
+          Math.max(0, Math.min(1, (e.clientX-r.left)/r.width))*100,
+          Math.max(0, Math.min(1, 1-(e.clientY-r.top)/r.height))*100
+        ];
+      }
+      let canvasDragging = false;
+      pickerCanvas.addEventListener('pointerdown', e => {
+        e.stopPropagation(); pickerCanvas.setPointerCapture(e.pointerId);
+        canvasDragging = true;
+        [pickerS, pickerV] = canvasPos(e); drawPickerCanvas(); applyPickerColor(false);
+      });
+      pickerCanvas.addEventListener('pointermove', e => {
+        if (!canvasDragging) return;
+        [pickerS, pickerV] = canvasPos(e); drawPickerCanvas(); applyPickerColor(false);
+      });
+      pickerCanvas.addEventListener('pointerup', e => {
+        if (!canvasDragging) return;
+        canvasDragging = false; applyPickerColor(true);
+      });
+
+      // Hue slider
+      const hueSlider = document.createElement('input');
+      hueSlider.type = 'range'; hueSlider.min = '0'; hueSlider.max = '360';
+      hueSlider.className = 'color-picker-hue'; hueSlider.value = String(Math.round(pickerH));
+      hueSlider.addEventListener('click', e => e.stopPropagation());
+      hueSlider.addEventListener('input', e => {
+        e.stopPropagation(); pickerH = +hueSlider.value;
+        drawPickerCanvas(); applyPickerColor(false);
+      });
+      hueSlider.addEventListener('change', e => { e.stopPropagation(); applyPickerColor(true); });
+
+      // Hex input wired to canvas state
       hexInput.addEventListener('input', () => {
-        let val = hexInput.value;
-        if (val && val[0] !== '#') { val = '#' + val; hexInput.value = val; }
-        if (/^#[0-9a-fA-F]{6}$/.test(val)) hexDot.style.background = val;
+        let v = hexInput.value;
+        if (v && v[0] !== '#') { v = '#' + v; hexInput.value = v; }
+        if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+          [pickerH, pickerS, pickerV] = hexToHsv(v);
+          hueSlider.value = String(Math.round(pickerH));
+          hexDot.style.background = v; drawPickerCanvas();
+        }
       });
       hexInput.addEventListener('keydown', e => {
         e.stopPropagation();
         if (e.key === 'Enter') {
-          let val = hexInput.value.trim();
-          if (val && val[0] !== '#') val = '#' + val;
-          if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+          let v = hexInput.value.trim();
+          if (v && v[0] !== '#') v = '#' + v;
+          if (/^#[0-9a-fA-F]{6}$/.test(v)) {
             colorPop.classList.remove('open');
-            vscode.postMessage({ type: 'updateTag', id: tag.id, changes: { color: val } });
+            vscode.postMessage({ type: 'updateTag', id: tag.id, changes: { color: v } });
           } else {
             hexInput.style.outline = '1px solid red';
             setTimeout(() => { hexInput.style.outline = ''; }, 1000);
@@ -3476,101 +3766,117 @@ export class SidebarView implements vscode.WebviewViewProvider {
         }
         if (e.key === 'Escape') colorPop.classList.remove('open');
       });
-      hexWrap.appendChild(hexDot);
-      hexWrap.appendChild(hexInput);
 
-      // Palette swatches + custom button
+      // Custom picker wrap (canvas + hue slider + hex row)
+      const hexRow = mkEl('div', 'tag-chip-hex-wrap');
+      hexRow.style.display = 'flex';
+      hexRow.appendChild(hexDot); hexRow.appendChild(hexInput);
+      const colorPickerWrap = mkEl('div', 'color-picker-wrap');
+      colorPickerWrap.appendChild(pickerCanvas);
+      colorPickerWrap.appendChild(hueSlider);
+      colorPickerWrap.appendChild(hexRow);
+
+      // Palette swatches + custom "+" button
       const swatchGrid = mkEl('div', 'tag-chip-swatches');
-      COLOR_KEYS.forEach(key => {
+      const colorNoneSw = mkEl('div', 'color-swatch default-swatch' + (tag.color === 'default' ? ' selected' : ''));
+      colorNoneSw.dataset.colorHex = 'default';
+      colorNoneSw.style.background = 'var(--vscode-foreground)';
+      colorNoneSw.title = 'Default';
+      colorNoneSw.textContent = '○';
+      colorNoneSw.addEventListener('click', e => {
+        e.stopPropagation();
+        hexDot.style.background = 'var(--vscode-foreground)';
+        hexInput.value = '';
+        vscode.postMessage({ type: 'updateTag', id: tag.id, changes: { color: 'default' } });
+      });
+      swatchGrid.appendChild(colorNoneSw);
+      COLOR_KEYS.filter(key => !hiddenDefaultColors.includes(COLORS[key])).forEach(key => {
+        const wrap = mkEl('div', 'custom-swatch-wrap');
         const sw = mkEl('div', 'color-swatch' + (COLORS[key] === tag.color ? ' selected' : ''));
-        sw.style.background = COLORS[key];
-        sw.dataset.colorHex = COLORS[key];
-        sw.title = key;
+        sw.style.background = COLORS[key]; sw.dataset.colorHex = COLORS[key]; sw.title = key;
         sw.addEventListener('click', e => {
           e.stopPropagation();
           const hex = COLORS[key];
-          hexInput.value = hex;
-          hexDot.style.background = hex;
-          hexWrap.classList.add('open');
-          customBtn.classList.add('active');
+          [pickerH, pickerS, pickerV] = hexToHsv(hex);
+          hueSlider.value = String(Math.round(pickerH));
+          hexDot.style.background = hex; hexInput.value = hex;
+          if (colorPickerWrap.classList.contains('open')) drawPickerCanvas();
           vscode.postMessage({ type: 'updateTag', id: tag.id, changes: { color: hex } });
-          setTimeout(() => hexInput.focus(), 0);
         });
-        swatchGrid.appendChild(sw);
+        const swDel = mkEl('button', 'custom-swatch-del');
+        swDel.type = 'button'; swDel.title = 'Hide color'; swDel.textContent = '×';
+        swDel.addEventListener('click', e => {
+          e.stopPropagation();
+          vscode.postMessage({ type: 'hideDefaultColor', color: COLORS[key] });
+        });
+        wrap.appendChild(sw); wrap.appendChild(swDel); swatchGrid.appendChild(wrap);
       });
       customColors.forEach(hex => {
         const wrap = mkEl('div', 'custom-swatch-wrap');
         const sw = mkEl('div', 'color-swatch' + (hex === tag.color ? ' selected' : ''));
-        sw.style.background = hex;
-        sw.dataset.colorHex = hex;
-        sw.title = hex;
+        sw.style.background = hex; sw.dataset.colorHex = hex; sw.title = hex;
         sw.addEventListener('click', e => {
           e.stopPropagation();
-          hexInput.value = hex;
-          hexDot.style.background = hex;
-          hexWrap.classList.add('open');
-          customBtn.classList.add('active');
+          [pickerH, pickerS, pickerV] = hexToHsv(hex);
+          hueSlider.value = String(Math.round(pickerH));
+          hexDot.style.background = hex; hexInput.value = hex;
+          if (colorPickerWrap.classList.contains('open')) drawPickerCanvas();
           vscode.postMessage({ type: 'updateTag', id: tag.id, changes: { color: hex } });
-          setTimeout(() => hexInput.focus(), 0);
         });
         wrap.appendChild(sw);
         const swDel = mkEl('button', 'custom-swatch-del');
-        swDel.type = 'button';
-        swDel.title = 'Remove saved color';
-        swDel.textContent = '×';
+        swDel.type = 'button'; swDel.title = 'Remove saved color'; swDel.textContent = '×';
         swDel.addEventListener('click', e => {
           e.stopPropagation();
           vscode.postMessage({ type: 'removeCustomColor', color: hex });
         });
-        wrap.appendChild(swDel);
-        swatchGrid.appendChild(wrap);
+        wrap.appendChild(swDel); swatchGrid.appendChild(wrap);
       });
-      const customBtn = mkEl('button', 'tag-chip-color-custom-btn' + (isCustomColor ? ' active' : ''));
-      customBtn.type = 'button';
-      customBtn.title = 'Custom color';
-      customBtn.textContent = '+';
+      const customBtn = mkEl('button', 'tag-chip-color-custom-btn');
+      customBtn.type = 'button'; customBtn.title = 'Custom color'; customBtn.textContent = '+';
       customBtn.addEventListener('click', e => {
         e.stopPropagation();
-        const opening = !hexWrap.classList.contains('open');
-        hexWrap.classList.toggle('open', opening);
+        const opening = !colorPickerWrap.classList.contains('open');
+        colorPickerWrap.classList.toggle('open', opening);
         customBtn.classList.toggle('active', opening);
-        if (opening) setTimeout(() => hexInput.focus(), 0);
+        colorPop.dataset.pickerOpen = opening ? '1' : '0';
+        if (opening) drawPickerCanvas();
       });
       swatchGrid.appendChild(customBtn);
       colorPop.appendChild(swatchGrid);
-      colorPop.appendChild(hexWrap);
+      colorPop.appendChild(colorPickerWrap);
 
-      // ── 4. Delete (custom tags only) ──────────────────────────────
-      if (!isDefault) {
-        colorPop.appendChild(mkEl('div', 'tag-chip-pop-danger-sep'));
-        const delBtn = document.createElement('button');
-        delBtn.className = 'tag-chip-pop-del';
-        const delIco = mkEl('span'); delIco.innerHTML = ${jsSvg.popDelete};
-        const delLbl = mkEl('span', '', 'Delete tag');
-        delBtn.appendChild(delIco);
-        delBtn.appendChild(delLbl);
-        let delTimer = null;
-        delBtn.addEventListener('click', e => {
-          e.stopPropagation();
-          if (delBtn.classList.contains('confirming')) {
-            clearTimeout(delTimer);
-            colorPop.classList.remove('open');
-            vscode.postMessage({ type: 'deleteTag', id: tag.id });
-          } else {
-            const count = notes.filter(n => n.tags && n.tags.includes(tag.id)).length;
-            const label = count === 0 ? 'Remove? (unused)' : 'Remove from ' + count + ' note' + (count === 1 ? '' : 's') + '?';
-            delBtn.classList.add('confirming');
-            delLbl.textContent = label;
-            delTimer = setTimeout(() => {
-              delBtn.classList.remove('confirming');
-              delLbl.textContent = 'Delete tag';
-            }, 3000);
-          }
-        });
-        colorPop.appendChild(delBtn);
-      }
+      // ── 4. Delete ─────────────────────────────────────────────────
+      colorPop.appendChild(mkEl('div', 'tag-chip-pop-danger-sep'));
+      const delBtn = document.createElement('button');
+      delBtn.className = 'ovf-item danger';
+      const delIco = mkEl('span', 'ovf-icon'); delIco.innerHTML = ${jsSvg.popDelete};
+      const delLbl = mkEl('span', 'ovf-label', 'Delete tag');
+      delBtn.appendChild(delIco);
+      delBtn.appendChild(delLbl);
+      let delTimer = null;
+      delBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (delBtn.classList.contains('confirm')) {
+          clearTimeout(delTimer);
+          colorPop.classList.remove('open');
+          vscode.postMessage({ type: 'deleteTag', id: tag.id });
+        } else {
+          const count = notes.filter(n => n.tags && n.tags.includes(tag.id)).length;
+          const label = count === 0 ? 'Remove? (unused)' : 'Remove from ' + count + ' note' + (count === 1 ? '' : 's') + '?';
+          delBtn.classList.replace('danger', 'confirm');
+          delLbl.textContent = label;
+          delTimer = setTimeout(() => {
+            delBtn.classList.replace('confirm', 'danger');
+            delLbl.textContent = 'Delete tag';
+          }, 3000);
+        }
+      });
+      colorPop.appendChild(delBtn);
 
       document.body.appendChild(colorPop);
+
+      colorPop._anchor = chip;
 
       chip.addEventListener('contextmenu', e => {
         e.preventDefault();
@@ -3578,17 +3884,8 @@ export class SidebarView implements vscode.WebviewViewProvider {
         const wasOpen = colorPop.classList.contains('open');
         document.querySelectorAll('.tag-chip-color-pop.open').forEach(p => p.classList.remove('open'));
         if (!wasOpen) {
-          const rect = chip.getBoundingClientRect();
-          colorPop.style.top  = (rect.bottom + 4) + 'px';
-          colorPop.style.left = rect.left + 'px';
           colorPop.classList.add('open');
-          const pop = colorPop.getBoundingClientRect();
-          if (pop.right > window.innerWidth) {
-            colorPop.style.left = Math.max(0, rect.right - pop.width) + 'px';
-          }
-          if (pop.bottom > window.innerHeight) {
-            colorPop.style.top = Math.max(0, rect.top - pop.height - 4) + 'px';
-          }
+          positionColorPop(colorPop);
         }
       });
 
@@ -3642,22 +3939,52 @@ export class SidebarView implements vscode.WebviewViewProvider {
 
     const addBtn = mkEl('button', 'add-tag-btn', '+ tag');
     addBtn.addEventListener('click', () => {
-      const usedCounts = {};
-      COLOR_KEYS.forEach(k => { usedCounts[k] = 0; });
-      tags.forEach(t => { const k = COLOR_KEYS.find(k => COLORS[k] === t.color); if (k) usedCounts[k]++; });
-      const autoKey = COLOR_KEYS.reduce((best, k) => usedCounts[k] < usedCounts[best] ? k : best, COLOR_KEYS[0]);
-      tagColor = COLORS[autoKey];
+      tagColor = 'default';
       highlightSwatch(tagColorsEl, tagColor);
       addTagForm.classList.add('open');
+      buildFormIconPicker();
+      updateConfirmBtn();
       tagLabelEl.focus();
     });
     tagBar.appendChild(addBtn);
 
+    if (savedPop) {
+      const newPop = document.querySelector('.tag-chip-color-pop[data-tag-id="' + savedPop.tagId + '"]');
+      if (newPop) {
+        newPop.classList.add('open');
+        positionColorPop(newPop);
+        if (savedPop.pickerOpen) {
+          const wrap   = newPop.querySelector('.color-picker-wrap');
+          const btn    = newPop.querySelector('.tag-chip-color-custom-btn');
+          const canvas = newPop.querySelector('.color-picker-canvas');
+          if (wrap && btn && canvas) {
+            wrap.classList.add('open');
+            btn.classList.add('active');
+            if (canvas._draw) canvas._draw();
+          }
+        }
+      }
+    }
   }
 
   // ── Add tag ─────────────────────────────────────────────────────────────
+  const confirmTagBtn = document.getElementById('btn-confirm-tag');
+
+  function updateConfirmBtn() {
+    const ready = tagLabelEl.value.trim().length > 0;
+    confirmTagBtn.disabled = !ready;
+  }
+
   document.getElementById('btn-cancel-tag').addEventListener('click', closeTagForm);
-  document.getElementById('btn-confirm-tag').addEventListener('click', confirmTag);
+  confirmTagBtn.addEventListener('click', confirmTag);
+  const tagLabelCounter = document.getElementById('tag-label-counter');
+  tagLabelEl.addEventListener('input', () => {
+    const len = tagLabelEl.value.length;
+    tagLabelCounter.textContent = len + '/24';
+    tagLabelCounter.classList.toggle('visible', len > 0);
+    tagLabelCounter.classList.toggle('near-limit', len >= 20);
+    updateConfirmBtn();
+  });
   tagLabelEl.addEventListener('keydown', e => {
     if (e.key === 'Enter')  { e.preventDefault(); confirmTag(); }
     if (e.key === 'Escape') closeTagForm();
@@ -3666,31 +3993,38 @@ export class SidebarView implements vscode.WebviewViewProvider {
   function closeTagForm() {
     addTagForm.classList.remove('open');
     tagLabelEl.value = '';
+    tagLabelCounter.textContent = '0/24';
+    tagLabelCounter.classList.remove('visible', 'near-limit');
+    tagColor = 'default';
     tagIcon = null;
     buildFormIconPicker();
+    updateConfirmBtn();
   }
   function confirmTag() {
     const label = tagLabelEl.value.trim();
-    if (!label) { tagLabelEl.focus(); return; }
+    if (!label) return;
     vscode.postMessage({ type: 'addTag', label, color: tagColor, ...(tagIcon ? { icon: tagIcon } : {}) });
     closeTagForm();
   }
 
   const tagIconPickerEl = document.getElementById('tag-icon-picker');
+
   function buildFormIconPicker() {
     tagIconPickerEl.innerHTML = '';
     const noneSw = mkEl('button', 'tag-icon-swatch none-swatch' + (!tagIcon ? ' selected' : ''));
-    noneSw.type = 'button';
-    noneSw.title = 'No icon';
-    noneSw.innerHTML = ${jsSvg.popNone};
-    noneSw.addEventListener('click', () => { tagIcon = null; buildFormIconPicker(); });
+    noneSw.type = 'button'; noneSw.title = 'No icon'; noneSw.innerHTML = ${jsSvg.popNone};
+    noneSw.addEventListener('click', () => { tagIcon = null; buildFormIconPicker(); updateConfirmBtn(); });
     tagIconPickerEl.appendChild(noneSw);
-    TAG_ICON_PALETTE.forEach(entry => {
+    DEFAULT_TAG_ICONS.filter(e => !hiddenDefaultIcons.includes(e.name)).forEach(entry => {
       const sw = mkEl('button', 'tag-icon-swatch' + (tagIcon === entry.name ? ' selected' : ''));
-      sw.type = 'button';
-      sw.title = entry.name;
-      sw.innerHTML = entry.svg;
-      sw.addEventListener('click', () => { tagIcon = entry.name; buildFormIconPicker(); });
+      sw.type = 'button'; sw.title = entry.name; sw.innerHTML = entry.svg;
+      sw.addEventListener('click', () => { tagIcon = entry.name; buildFormIconPicker(); updateConfirmBtn(); });
+      tagIconPickerEl.appendChild(sw);
+    });
+    savedIconSvgs.forEach(({ name, svg }) => {
+      const sw = mkEl('button', 'tag-icon-swatch' + (tagIcon === name ? ' selected' : ''));
+      sw.type = 'button'; sw.title = name; sw.innerHTML = svg;
+      sw.addEventListener('click', () => { tagIcon = name; buildFormIconPicker(); updateConfirmBtn(); });
       tagIconPickerEl.appendChild(sw);
     });
   }
@@ -3976,9 +4310,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
       const tag = tags.find(t => t.id === tid);
       if (!tag) return;
       const pill = mkEl('span', 'tag-pill');
-      pill.style.background = hexToRgba(tag.color, 0.18);
-      pill.style.borderColor = tag.color;
-      pill.style.color = tag.color;
+      applyPillStyle(pill, tag.color);
       if (tag.iconSvg) { const ico = mkEl('span', 'tag-icon'); ico.innerHTML = tag.iconSvg; pill.appendChild(ico); }
       pill.appendChild(mkEl('span', '', tag.label));
       pill.title = 'Filter by ' + tag.label;
@@ -4129,9 +4461,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
           const tag = tags.find(t => t.id === tid);
           if (!tag) return;
           const pill = mkEl('span', 'tag-pill');
-          pill.style.background = hexToRgba(tag.color, 0.18);
-          pill.style.borderColor = tag.color;
-          pill.style.color = tag.color;
+          applyPillStyle(pill, tag.color);
           if (tag.iconSvg) { const ico = mkEl('span', 'tag-icon'); ico.innerHTML = tag.iconSvg; pill.appendChild(ico); }
           pill.appendChild(mkEl('span', '', tag.label));
           pillsArea.appendChild(pill);
@@ -4524,8 +4854,24 @@ export class SidebarView implements vscode.WebviewViewProvider {
     closeAllPops();
   });
 
+  function positionColorPop(pop) {
+    const anchor = pop._anchor;
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    pop.style.top  = (rect.bottom + 4) + 'px';
+    pop.style.left = rect.left + 'px';
+    const pr = pop.getBoundingClientRect();
+    if (pr.right > window.innerWidth - 5) pop.style.left = Math.max(0, rect.right - pr.width - 5) + 'px';
+    if (pr.bottom > window.innerHeight) pop.style.top  = Math.max(0, rect.top - pr.height - 4) + 'px';
+  }
+
+  new ResizeObserver(() => {
+    document.querySelectorAll('.tag-chip-color-pop.open').forEach(positionColorPop);
+  }).observe(document.body);
+
   function closeAllPops() {
     if (cardTagPickerCommit) { cardTagPickerCommit(); cardTagPickerCommit = null; }
+    iconSearchResultsCb = null;
     document.querySelectorAll('.card-tag-picker').forEach(p => { p.style.display = 'none'; });
     document.querySelectorAll('.tag-chip-color-pop.open').forEach(el => el.classList.remove('open'));
     openColorPop    = null;
@@ -4553,9 +4899,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
       chip.appendChild(mkEl('span', '', tag.label));
       const applyStyle = active => {
         chip.classList.toggle('active', active);
-        chip.style.background  = active ? tag.color : hexToRgba(tag.color, 0.18);
-        chip.style.borderColor = active ? 'rgba(0,0,0,0.25)' : tag.color;
-        chip.style.color       = active ? '${C.text}' : tag.color;
+        applyChipStyle(chip, tag.color, active);
       };
       applyStyle(getSelected().includes(tag.id));
       chip.addEventListener('click', e => {
@@ -4580,6 +4924,18 @@ export class SidebarView implements vscode.WebviewViewProvider {
     return '<p>' + esc(text.slice(0, li)) + '<mark class="match-highlight">' + esc(text.slice(li, li + query.length)) + '</mark>' + esc(text.slice(li + query.length)) + '</p>';
   }
 
+  function hsvToHex(h, s, v) {
+    s /= 100; v /= 100;
+    const f = n => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); };
+    return '#' + [f(5), f(3), f(1)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
+  }
+  function hexToHsv(hex) {
+    const r = parseInt(hex.slice(1,3),16)/255, g = parseInt(hex.slice(3,5),16)/255, b = parseInt(hex.slice(5,7),16)/255;
+    const max = Math.max(r,g,b), min = Math.min(r,g,b), d = max - min;
+    const h = d === 0 ? 0 : max === r ? ((g-b)/d % 6)*60 : max === g ? ((b-r)/d+2)*60 : ((r-g)/d+4)*60;
+    return [((h%360)+360)%360, max===0?0:d/max*100, max*100];
+  }
+
   function mkEl(tag, cls = '', text = '') {
     const el = document.createElement(tag);
     if (cls)  el.className = cls;
@@ -4587,17 +4943,29 @@ export class SidebarView implements vscode.WebviewViewProvider {
     return el;
   }
 
-  function mkPopLabel(iconSvg, text) {
-    const el = mkEl('div', 'tag-chip-pop-label');
-    const ico = mkEl('span'); ico.innerHTML = iconSvg;
-    el.appendChild(ico);
-    el.appendChild(mkEl('span', '', text));
-    return el;
+  function mkSavedIconSwatch(name, svg, isSelected, onSelect) {
+    const wrap = mkEl('div', 'custom-swatch-wrap');
+    const sw = mkEl('button', 'tag-icon-swatch' + (isSelected ? ' selected' : ''));
+    sw.type = 'button'; sw.title = name; sw.innerHTML = svg;
+    sw.addEventListener('click', e => { e.stopPropagation(); onSelect(name); });
+    wrap.appendChild(sw);
+    const del = mkEl('button', 'custom-swatch-del');
+    del.type = 'button'; del.title = 'Remove icon'; del.textContent = '×';
+    del.addEventListener('click', e => { e.stopPropagation(); vscode.postMessage({ type: 'removeSavedIcon', name }); });
+    wrap.appendChild(del);
+    return wrap;
   }
 
   function buildColorStrip(container, onSelect) {
     container.innerHTML = '';
-    COLOR_KEYS.forEach(key => {
+    const noneSw = mkEl('div', 'color-swatch default-swatch');
+    noneSw.dataset.colorHex = 'default';
+    noneSw.style.background = 'var(--vscode-foreground)';
+    noneSw.title = 'Default';
+    noneSw.textContent = '○';
+    noneSw.addEventListener('click', () => onSelect('default'));
+    container.appendChild(noneSw);
+    COLOR_KEYS.filter(key => !hiddenDefaultColors.includes(COLORS[key])).forEach(key => {
       const sw = mkEl('div', 'color-swatch');
       sw.style.background = COLORS[key];
       sw.title = key;
@@ -4606,12 +4974,42 @@ export class SidebarView implements vscode.WebviewViewProvider {
       sw.addEventListener('click', () => onSelect(COLORS[key]));
       container.appendChild(sw);
     });
+    customColors.forEach(hex => {
+      const sw = mkEl('div', 'color-swatch');
+      sw.style.background = hex;
+      sw.title = hex;
+      sw.dataset.colorHex = hex;
+      sw.addEventListener('click', () => onSelect(hex));
+      container.appendChild(sw);
+    });
   }
 
   function highlightSwatch(container, hex) {
     container.querySelectorAll('.color-swatch').forEach(sw => {
       sw.classList.toggle('selected', sw.dataset.colorHex === hex);
     });
+  }
+
+  function applyChipStyle(el, color, isActive) {
+    if (!color || color === 'default') {
+      el.classList.add('default-color');
+      el.style.background = el.style.borderColor = el.style.color = '';
+    } else {
+      el.classList.remove('default-color');
+      el.style.background  = isActive ? color : hexToRgba(color, 0.18);
+      el.style.borderColor = isActive ? 'rgba(0,0,0,0.25)' : color;
+      el.style.color       = isActive ? '${C.text}' : color;
+    }
+  }
+
+  function applyPillStyle(el, color) {
+    if (!color || color === 'default') {
+      el.classList.add('default-color');
+    } else {
+      el.style.background  = hexToRgba(color, 0.18);
+      el.style.borderColor = color;
+      el.style.color       = color;
+    }
   }
 
   function hexToRgba(hex, alpha) {

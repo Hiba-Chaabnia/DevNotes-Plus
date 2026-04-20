@@ -180,7 +180,11 @@ export class NoteStorage {
   private notes:        Note[]     = [];
   private tags:         Tag[]      = [];
   private templates:    Template[] = []; // custom templates only; BUILTIN_TEMPLATES always prepended
-  private customColors: string[]   = [];
+  private customColors:        string[]   = [];
+  private savedIcons:          string[]   = [];
+  private deletedDefaultIds:   string[]   = [];
+  private hiddenDefaultColors: string[]   = [];
+  private hiddenDefaultIcons:  string[]   = [];
 
   /** Called when the cache is updated due to external file changes (e.g. git pull). */
   onExternalChange?: () => void;
@@ -234,12 +238,42 @@ export class NoteStorage {
   }
 
   getTags(): Tag[] { return this.tags; }
-  getCustomColors(): string[] { return this.customColors; }
+  getCustomColors():        string[] { return this.customColors; }
+  getSavedIcons():          string[] { return [...this.savedIcons]; }
+  getHiddenDefaultColors(): string[] { return [...this.hiddenDefaultColors]; }
+  getHiddenDefaultIcons():  string[] { return [...this.hiddenDefaultIcons]; }
+
+  async hideDefaultColor(hex: string): Promise<void> {
+    if (!this.hiddenDefaultColors.includes(hex)) {
+      this.hiddenDefaultColors = [...this.hiddenDefaultColors, hex];
+      await this.writeTags();
+    }
+  }
+
+  async hideDefaultIcon(name: string): Promise<void> {
+    if (!this.hiddenDefaultIcons.includes(name)) {
+      this.hiddenDefaultIcons = [...this.hiddenDefaultIcons, name];
+      await this.writeTags();
+    }
+  }
+
+  async addSavedIcon(name: string): Promise<void> {
+    if (this.savedIcons.includes(name)) return;
+    this.savedIcons = [...this.savedIcons, name];
+    await this.writeTags();
+  }
+
+  async removeSavedIcon(name: string): Promise<void> {
+    this.savedIcons = this.savedIcons.filter(n => n !== name);
+    await this.writeTags();
+  }
 
   private saveCustomColor(hex: string): void {
     const palette = Object.values(NOTE_COLORS);
-    if (palette.includes(hex)) return;
-    this.customColors = [hex, ...this.customColors.filter(c => c !== hex)].slice(0, 6);
+    if (hex === 'default' || palette.includes(hex)) return;
+    if (!this.customColors.includes(hex)) {
+      this.customColors = [...this.customColors, hex].slice(0, 6);
+    }
   }
 
   async removeCustomColor(hex: string): Promise<void> {
@@ -317,10 +351,11 @@ export class NoteStorage {
   async deleteTag(id: string): Promise<void> {
     const isDefault = DEFAULT_TAGS.some(t => t.id === id);
 
-    if (!isDefault) {
-      this.tags = this.tags.filter(t => t.id !== id);
-      await this.writeTags();
+    this.tags = this.tags.filter(t => t.id !== id);
+    if (isDefault && !this.deletedDefaultIds.includes(id)) {
+      this.deletedDefaultIds.push(id);
     }
+    await this.writeTags();
 
     // Scrub tag from affected notes, bumping updatedAt so git history reflects the change
     const affected = this.notes.filter(n => n.tags.includes(id));
@@ -633,10 +668,15 @@ export class NoteStorage {
       const parsed = JSON.parse(dec.decode(raw));
       const custom: Tag[] = Array.isArray(parsed) ? parsed : (parsed.tags ?? []);
       const order:  string[] | undefined = Array.isArray(parsed) ? undefined : parsed.order;
-      this.customColors = Array.isArray(parsed) ? [] : (parsed.customColors ?? []);
+      this.customColors        = Array.isArray(parsed) ? [] : (parsed.customColors        ?? []);
+      this.savedIcons          = Array.isArray(parsed) ? [] : (parsed.savedIcons          ?? []);
+      this.deletedDefaultIds   = Array.isArray(parsed) ? [] : (parsed.deletedDefaultIds   ?? []);
+      this.hiddenDefaultColors = Array.isArray(parsed) ? [] : (parsed.hiddenDefaultColors ?? []);
+      this.hiddenDefaultIcons  = Array.isArray(parsed) ? [] : (parsed.hiddenDefaultIcons  ?? []);
       const customIds = new Set(custom.map(t => t.id));
+      const deleted   = new Set(this.deletedDefaultIds);
       const merged = [
-        ...DEFAULT_TAGS.filter(t => !customIds.has(t.id)),
+        ...DEFAULT_TAGS.filter(t => !customIds.has(t.id) && !deleted.has(t.id)),
         ...custom,
       ];
       if (order?.length) {
@@ -661,7 +701,7 @@ export class NoteStorage {
       });
       await vscode.workspace.fs.writeFile(
         vscode.Uri.joinPath(this.folder, 'tags.json'),
-        enc.encode(JSON.stringify({ tags: custom, order: this.tags.map(t => t.id), customColors: this.customColors }, null, 2))
+        enc.encode(JSON.stringify({ tags: custom, order: this.tags.map(t => t.id), customColors: this.customColors, savedIcons: this.savedIcons, deletedDefaultIds: this.deletedDefaultIds, hiddenDefaultColors: this.hiddenDefaultColors, hiddenDefaultIcons: this.hiddenDefaultIcons }, null, 2))
       );
     } finally {
       setTimeout(() => this.tagsWriteInflight--, 500);
