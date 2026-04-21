@@ -205,6 +205,23 @@ export class SidebarView implements vscode.WebviewViewProvider {
   }
 
   /** Call this after any storage mutation to sync the sidebar. */
+  showChipPreview(): void {
+    if (!this.view) {
+      vscode.commands.executeCommand('devnotesView.focus');
+    }
+    this.view?.webview.postMessage({
+      type  : 'showChipPreview',
+      colors: {
+        green   : NC.green,
+        blue    : NC.blue,
+        orange  : NC.orange,
+        yellow  : NC.yellow,
+        lavender: NC.lavender,
+        red     : NC.red,
+      },
+    });
+  }
+
   push(): void {
     if (!this.view?.visible) return;
     const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
@@ -868,6 +885,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
       codeLinkMenu:  JSON.stringify(svgIcon(FileSymlink,           14)),
       conflictIcon:  JSON.stringify(svgIcon(TriangleAlert,         11)),
       archiveIcon:   JSON.stringify(svgIcon(Archive,               11)),
+      shareSmall:    JSON.stringify(svgIcon(Share2,                11)),
       bellSmall:     JSON.stringify(svgIcon(Bell,                  11)),
       branchSmall:   JSON.stringify(svgIcon(GitBranch,             11)),
       branchMenu:    JSON.stringify(svgIcon(GitBranch,             14)),
@@ -1129,49 +1147,6 @@ export class SidebarView implements vscode.WebviewViewProvider {
     flex-shrink: 0;
   }
 
-  .github-filter-bar {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 5px 10px;
-    border-bottom: 1px solid var(--vscode-panel-border);
-    flex-shrink: 0;
-  }
-  .github-filter-bar .gh-chip {
-    font-size: 11px;
-    padding: 2px 7px;
-    border-radius: 20px;
-    border: 1.5px solid transparent;
-    cursor: pointer;
-    font-weight: 500;
-    background: var(--vscode-button-secondaryBackground);
-    color: var(--vscode-button-secondaryForeground);
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    white-space: nowrap;
-    transition: opacity .12s;
-  }
-  .github-filter-bar .gh-chip:hover { opacity: .85; }
-  .github-filter-bar .gh-chip.active {
-    background: var(--vscode-button-background);
-    color: var(--vscode-button-foreground);
-    border-color: transparent;
-  }
-  .github-filter-bar .gh-chip .gh-dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .github-filter-bar .gh-chip.open-chip  .gh-dot { background: ${GH.open}; }
-  .github-filter-bar .gh-chip.closed-chip .gh-dot { background: ${GH.closed}; }
-  .github-filter-bar .gh-chip.merged-chip .gh-dot { background: ${GH.merged}; }
-  .github-filter-bar .gh-filter-label {
-    font-size: 10px;
-    opacity: .5;
-    margin-right: 2px;
-    white-space: nowrap;
-  }
 
   .tag-chip {
     font-size: 11px;
@@ -1706,10 +1681,11 @@ export class SidebarView implements vscode.WebviewViewProvider {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: 10px;
-    padding: 1px 7px;
-    border-radius: 10px;
-    border: 1px dashed rgba(128,128,128,.35);
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 20px;
+    line-height: 1;
+    border: 1.5px dashed rgba(128,128,128,.35);
     background: none;
     color: var(--card-text);
     opacity: .35;
@@ -1718,18 +1694,23 @@ export class SidebarView implements vscode.WebviewViewProvider {
   }
   .tag-ghost:hover { opacity: .7; }
   .tag-pill {
-    font-size: 10px;
-    padding: 1px 6px;
-    border-radius: 10px;
-    border: 1px solid transparent;
-    font-weight: 600;
     color: ${C.text};
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
   }
-  .tag-pill:hover { filter: brightness(.9); }
+  .chip-remove {
+    font-size: 8px;
+    flex-shrink: 0;
+    padding: 0 1px;
+    margin-left: -3px;
+    border-radius: 2px;
+    line-height: 1;
+    max-width: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-width .15s, opacity .1s, margin-left .15s;
+  }
+  .tag-pill:hover .chip-remove,
+  .meta-chip:hover .chip-remove  { max-width: 16px; opacity: .55; margin-left: 0; }
+  .chip-remove:hover             { opacity: 1 !important; }
   .tag-icon { display: inline-flex; align-items: center; flex-shrink: 0; }
 
   .card-date {
@@ -2119,26 +2100,26 @@ export class SidebarView implements vscode.WebviewViewProvider {
   .card.is-archived { opacity: .7; filter: grayscale(.25); }
 
 
-  /* ── Shared metadata chip base (mirrors .tag-pill) ─────── */
-  .meta-chip {
-    font-size: 10px;
-    padding: 1px 6px;
-    border-radius: 10px;
-    font-weight: 600;
-    color: ${C.text};
+  /* ── Shared chip base ───────────────────────────────────── */
+  .tag-pill, .meta-chip {
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 20px;
+    border: 1.5px solid transparent;
+    font-weight: 500;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: 3px;
+    line-height: 1;
     white-space: nowrap;
     transition: filter .12s;
-    border: none;
     outline: none;
   }
-  .meta-chip:hover { filter: brightness(.9); }
+  .tag-pill:hover, .meta-chip:hover { filter: brightness(.9); }
 
-  .archived-badge { background: ${C.muted}; }
-  .branch-chip    { background: rgba(128,128,128,.18); }
+  .archived-badge { background: rgba(148,163,184,.18); border-color: ${C.muted};       color: ${C.muted}; }
+  .branch-chip    { background: rgba(128,128,128,.18); border-color: rgba(128,128,128,.5); color: rgba(128,128,128,1); }
 
   /* Off-branch card — dimmed but still accessible */
   .card.off-branch { opacity: .42; }
@@ -2202,17 +2183,18 @@ export class SidebarView implements vscode.WebviewViewProvider {
   .stale-filter-btn.active { color: ${NC.orange} !important; opacity: 1; }
 
   /* ── Conflict / shared indicators ───────────────────── */
-  .conflict-badge { background: ${NC.orange}; }
-  .shared-badge   { background: rgba(${RGB.blue},.85); }
+  .conflict-badge { background: rgba(224,82,82,.2);    border-color: ${C.danger};       color: ${C.danger}; }
+  .shared-badge   { background: rgba(123,97,255,.18); border-color: ${C.activityBg};  color: ${C.activityBg}; }
 
   /* ── Reminder badge ─────────────────────────────────── */
-  .reminder-badge         { background: ${NC.yellow}; }
-  .reminder-badge.overdue { background: ${NC.orange}; }
+  .reminder-badge         { background: rgba(212,144,10,.18); border-color: ${C.remindWarn}; color: ${C.remindWarn}; }
+  .reminder-badge.overdue { background: rgba(255,134,55,.25); border-color: ${NC.orange};    color: ${NC.orange}; }
 
   /* ── GitHub status badge ────────────────────────────── */
-  .github-badge.gh-open   { background: ${GH.open};   }
-  .github-badge.gh-closed { background: ${C.muted};   }
-  .github-badge.gh-merged { background: ${GH.merged}; color: ${C.white}; }
+  .github-badge { text-transform: lowercase; }
+  .github-badge.gh-open   { background: rgba(6,214,160,.18);  border-color: ${GH.open};   color: ${GH.open}; }
+  .github-badge.gh-closed { background: rgba(136,136,136,.18); border-color: ${C.muted};  color: ${C.muted}; }
+  .github-badge.gh-merged { background: rgba(130,80,223,.18); border-color: ${GH.merged}; color: ${GH.merged}; }
 
 
   /* ── Empty state ─────────────────────────────────────── */
@@ -2232,12 +2214,19 @@ export class SidebarView implements vscode.WebviewViewProvider {
   .empty p { font-size: 12px; line-height: 1.5; }
 
   /* ── Code link chip ──────────────────────────────────── */
-  .code-link-chip {
-    background: ${NC.blue};
-    font-family: var(--vscode-editor-font-family, monospace);
-    max-width: 200px;
+  .chip-label {
     overflow: hidden;
     text-overflow: ellipsis;
+    min-width: 0;
+    transform: translateY(1px);
+  }
+  .chip-text, .tag-chip-label { transform: translateY(1px); }
+  .code-link-chip {
+    background: rgba(67,180,251,.18);
+    border-color: ${NC.blue};
+    color: ${NC.blue};
+    font-family: var(--vscode-editor-font-family, monospace);
+    max-width: 200px;
     flex-shrink: 0;
   }
   .code-link-chip.stale {
@@ -2246,36 +2235,13 @@ export class SidebarView implements vscode.WebviewViewProvider {
     cursor: default;
     pointer-events: none;
   }
-  .code-link-remove {
-    opacity: 0;
-    font-size: 8px;
-    padding: 0 1px;
-    border-radius: 2px;
-    line-height: 1;
-    flex-shrink: 0;
-    transition: opacity .1s;
-  }
-  .code-link-chip:hover .code-link-remove { opacity: .55; }
-  .code-link-remove:hover { opacity: 1 !important; }
-
   .note-links-row { display: contents; } /* flattened into row2 */
   .note-link-chip {
-    background: ${NC.lavender};
+    background: rgba(219,149,253,.18);
+    border-color: ${NC.lavender};
+    color: ${NC.lavender};
     max-width: 160px;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
-  .note-link-unlink {
-    opacity: 0;
-    font-size: 8px;
-    flex-shrink: 0;
-    padding: 0 1px;
-    border-radius: 2px;
-    line-height: 1;
-    transition: opacity .1s;
-  }
-  .note-link-chip:hover .note-link-unlink { opacity: .55; }
-  .note-link-unlink:hover { opacity: 1 !important; }
 
   .sort-btn.active { color: var(--vscode-button-background); opacity: 1; }
 
@@ -2294,6 +2260,51 @@ export class SidebarView implements vscode.WebviewViewProvider {
     white-space: nowrap;
     pointer-events: none;
     user-select: none;
+  }
+
+  /* ── Chip preview simulation ─────────────────────────── */
+  .chip-preview {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+  }
+  .chip-preview-close-bar {
+    display: flex;
+    align-items: center;
+    padding-bottom: 8px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+  }
+  .chip-preview-close-btn {
+    font-size: 11px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: var(--vscode-foreground);
+    opacity: .65;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: var(--vscode-font-family);
+  }
+  .chip-preview-close-btn:hover { opacity: 1; background: var(--vscode-toolbar-hoverBackground); }
+  .chip-preview-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 3px 0;
+  }
+  .chip-preview-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    opacity: .4;
+    width: 68px;
+    flex-shrink: 0;
+    color: var(--vscode-foreground);
   }
 
   /* ── Theme preview bar ───────────────────────────────── */
@@ -2583,8 +2594,6 @@ export class SidebarView implements vscode.WebviewViewProvider {
 <!-- ── Tag filter bar ── -->
 <div class="tag-bar" id="tag-bar"></div>
 
-<!-- ── GitHub status filter bar ── -->
-<div class="github-filter-bar" id="github-filter-bar" style="display:none"></div>
 
 <!-- ── Setup banner ── -->
 <div class="setup-banner" id="setup-banner">
@@ -2728,8 +2737,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
   let githubConnected     = false;
   let showArchived           = false;
   let sortMode               = 'updated'; // 'updated' | 'starred' | 'alpha'
-  let githubStatusFilter     = null; // null | 'open' | 'closed' | 'merged'
-  let staleFilterActive      = false;
+let staleFilterActive      = false;
   let selectMode         = false;
   let selectedIds        = [];
   let knownNoteIds       = null; // null on first load — skip highlight; Set afterwards
@@ -2759,7 +2767,6 @@ export class SidebarView implements vscode.WebviewViewProvider {
   btnSelect.classList.add('select-mode-btn');
   const exportBar         = document.getElementById('export-bar');
   const branchPillEl         = document.getElementById('branch-pill');
-  const githubFilterBar      = document.getElementById('github-filter-bar');
   const btnSort              = document.getElementById('btn-sort');
   const branchFilterBtn   = document.getElementById('btn-branch-filter');
   const branchScopeLabel  = document.getElementById('branch-scope-label');
@@ -2835,7 +2842,6 @@ export class SidebarView implements vscode.WebviewViewProvider {
     showArchived = !showArchived;
     btnArchiveView.classList.toggle('active', showArchived);
     btnArchiveView.title = showArchived ? 'Back to notes' : 'Show archived notes';
-    githubStatusFilter = null;
     syncOverflowActive();
     renderCards();
   });
@@ -3022,6 +3028,10 @@ export class SidebarView implements vscode.WebviewViewProvider {
     }
     if (msg.type === 'lucideSearchResults') {
       if (iconSearchResultsCb) iconSearchResultsCb(msg.icons);
+      return;
+    }
+    if (msg.type === 'showChipPreview') {
+      renderChipPreview(msg.colors);
       return;
     }
     if (msg.type === 'imageReady') {
@@ -3218,7 +3228,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
         const pill = mkEl('span', 'tag-pill');
         applyPillStyle(pill, tag.color);
         if (tag.iconSvg) { const ico = mkEl('span', 'tag-icon'); ico.innerHTML = tag.iconSvg; pill.appendChild(ico); }
-        pill.appendChild(mkEl('span', '', tag.label));
+        pill.appendChild(mkEl('span', 'chip-label', tag.label));
         pillsArea.appendChild(pill);
       });
       ghostBtn.innerHTML = draftTags.length === 0 ? ${jsSvg.tagSmall} + 'tag' : ${jsSvg.tagSmall};
@@ -3489,7 +3499,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
       const chip = mkEl('button', 'tag-chip' + (isActiveNew ? ' active' : ''));
       chip.type = 'button';
       if (tag.iconSvg) { const ico = mkEl('span', 'tag-icon'); ico.innerHTML = tag.iconSvg; chip.appendChild(ico); }
-      chip.appendChild(mkEl('span', '', tag.label));
+      chip.appendChild(mkEl('span', 'chip-text', tag.label));
       applyChipStyle(chip, tag.color, isActiveNew);
       chip.addEventListener('click', () => {
         newTags = newTags.includes(tag.id)
@@ -4057,10 +4067,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
       if (showArchived ? !n.archived : n.archived) return false;
       if (mineFilterActive && currentUser && n.owner && n.owner !== currentUser) return false;
       if (branchFilterActive && currentBranch && n.branch && n.branch !== currentBranch) return false;
-      if (githubStatusFilter) {
-        if (!n.github || n.github.status !== githubStatusFilter) return false;
-      }
-      if (searchQuery) {
+if (searchQuery) {
         const tagText = n.tags.map(tid => { const t = tags.find(t => t.id === tid); return t ? t.label : ''; }).join(' ').toLowerCase();
         if (!n.title.toLowerCase().includes(searchQuery) &&
             !n.content.toLowerCase().includes(searchQuery) &&
@@ -4079,43 +4086,85 @@ export class SidebarView implements vscode.WebviewViewProvider {
     });
   }
 
-  function renderGitHubFilterBar() {
-    const linkedNotes = notes.filter(n => !n.archived && n.github);
-    githubFilterBar.style.display = linkedNotes.length > 0 ? '' : 'none';
-    if (linkedNotes.length === 0) return;
+  function renderChipPreview(colors) {
+    cardList.innerHTML = '';
+    const wrap = mkEl('div', 'chip-preview');
 
-    githubFilterBar.innerHTML = '';
-    const label = mkEl('span', 'gh-filter-label', 'GitHub:');
-    githubFilterBar.appendChild(label);
+    const closeBar = mkEl('div', 'chip-preview-close-bar');
+    const closeBtn = mkEl('button', 'chip-preview-close-btn');
+    closeBtn.textContent = '← Close preview';
+    closeBtn.addEventListener('click', () => { renderTagBar(); renderCards(); });
+    closeBar.appendChild(closeBtn);
+    wrap.appendChild(closeBar);
 
-    const statuses = [
-      { key: null,     text: 'All' },
-      { key: 'open',   text: 'Open',   cls: 'open-chip'   },
-      { key: 'closed', text: 'Closed', cls: 'closed-chip' },
-      { key: 'merged', text: 'Merged', cls: 'merged-chip' },
+    function group(labelText, chips) {
+      const row = mkEl('div', 'chip-preview-group');
+      row.appendChild(mkEl('span', 'chip-preview-label', labelText));
+      chips.forEach(c => row.appendChild(c));
+      wrap.appendChild(row);
+    }
+
+    function makeRemoveBtn() {
+      const rm = mkEl('span', 'chip-remove');
+      rm.innerHTML = ${jsSvg.unlinkSmall};
+      return rm;
+    }
+
+    // ── Tag pills ──
+    const tagDefs = [
+      { color: colors.green, label: 'Backend' },
+      { color: colors.blue,  label: 'API', icon: true },
+      { color: null,         label: 'Design' },
     ];
+    group('Tags', tagDefs.map(({ color, label, icon }) => {
+      const pill = mkEl('button', 'tag-pill');
+      applyPillStyle(pill, color);
+      if (icon) { const ico = mkEl('span', 'tag-icon'); ico.innerHTML = ${jsSvg.tagSmall}; pill.appendChild(ico); }
+      pill.appendChild(mkEl('span', 'chip-label', label));
+      pill.appendChild(makeRemoveBtn());
+      return pill;
+    }));
 
-    statuses.forEach(({ key, text, cls }) => {
-      // Only show status chips that have at least one matching note
-      if (key !== null && !linkedNotes.some(n => n.github.status === key)) return;
+    // ── Note link ──
+    const noteLink = makeChip('button', 'note-link-chip', ${jsSvg.noteLinkIcon}, 'Simplify pattern documentation refactor', 'chip-label');
+    const nlUnlink = mkEl('span', 'chip-remove'); nlUnlink.innerHTML = ${jsSvg.unlinkSmall};
+    noteLink.appendChild(nlUnlink);
+    group('Note link', [noteLink]);
 
-      const chip = mkEl('button', 'gh-chip' + (cls ? ' ' + cls : '') + (githubStatusFilter === key ? ' active' : ''));
-      if (cls) {
-        const dot = mkEl('span', 'gh-dot');
-        chip.appendChild(dot);
-      }
-      chip.appendChild(mkEl('span', '', text));
-      chip.addEventListener('click', () => {
-        githubStatusFilter = key;
-        renderGitHubFilterBar();
-        renderCards();
-      });
-      githubFilterBar.appendChild(chip);
-    });
+    // ── Code link ──
+    const codeLink = makeChip('button', 'code-link-chip', ${jsSvg.codeLinkIcon}, 'SidebarView.ts:4357', 'chip-label');
+    const clRemove = mkEl('span', 'chip-remove'); clRemove.innerHTML = ${jsSvg.unlinkSmall};
+    codeLink.appendChild(clRemove);
+    group('Code link', [codeLink]);
+
+    // ── GitHub ──
+    const ghDefs = [
+      { cls: 'gh-open',   icon: ${jsSvg.ghPrOpen},      label: 'PR#12 open'  },
+      { cls: 'gh-closed', icon: ${jsSvg.ghPrClosed},    label: 'pr#8 closed' },
+      { cls: 'gh-merged', icon: ${jsSvg.ghPrMerged},    label: 'pr#3 merged' },
+      { cls: 'gh-open',   icon: ${jsSvg.ghIssueOpen},   label: '#2 open'     },
+      { cls: 'gh-closed', icon: ${jsSvg.ghIssueClosed}, label: '#5 closed'   },
+    ];
+    group('GitHub', ghDefs.map(({ cls, icon, label }) => makeChip('button', \`github-badge \${cls}\`, icon, label)));
+
+    // ── Reminders ──
+    group('Reminder', [
+      makeChip('span', 'reminder-badge',         ${jsSvg.bellSmall}, 'in 2h'  ),
+      makeChip('span', 'reminder-badge overdue', ${jsSvg.bellSmall}, '3d ago' ),
+    ]);
+
+    // ── Status badges ──
+    group('Status', [
+      makeChip('span',   'shared-badge',   ${jsSvg.shareSmall},   'Shared'      ),
+      makeChip('span',   'archived-badge', ${jsSvg.archiveIcon},  'Archived'    ),
+      makeChip('button', 'conflict-badge', ${jsSvg.conflictIcon}, 'Conflict'    ),
+      makeChip('span',   'branch-chip',    ${jsSvg.branchSmall},  'feat/sidebar'),
+    ]);
+
+    cardList.appendChild(wrap);
   }
 
   function renderCards() {
-    renderGitHubFilterBar();
     cardList.innerHTML = '';
     const visible = visibleNotes();
     if (visible.length === 0) {
@@ -4331,12 +4380,21 @@ export class SidebarView implements vscode.WebviewViewProvider {
     note.tags.forEach(tid => {
       const tag = tags.find(t => t.id === tid);
       if (!tag) return;
-      const pill = mkEl('span', 'tag-pill');
+      const pill = mkEl('button', 'tag-pill');
       applyPillStyle(pill, tag.color);
       if (tag.iconSvg) { const ico = mkEl('span', 'tag-icon'); ico.innerHTML = tag.iconSvg; pill.appendChild(ico); }
-      pill.appendChild(mkEl('span', '', tag.label));
+      pill.appendChild(mkEl('span', 'chip-label', tag.label));
+      const removeBtn = mkEl('span', 'chip-remove');
+      removeBtn.innerHTML = ${jsSvg.unlinkSmall};
+      removeBtn.title = 'Remove tag';
+      pill.appendChild(removeBtn);
       pill.title = 'Filter by ' + tag.label;
-      pill.addEventListener('click', () => {
+      pill.addEventListener('click', e => {
+        if (e.target === removeBtn || removeBtn.contains(e.target)) {
+          e.stopPropagation();
+          vscode.postMessage({ type: 'updateNote', id: note.id, changes: { tags: note.tags.filter(t => t !== tid) } });
+          return;
+        }
         if (!activeTagIds.includes(tid)) {
           activeTagIds = [...activeTagIds, tid];
           renderTagBar();
@@ -4350,14 +4408,12 @@ export class SidebarView implements vscode.WebviewViewProvider {
       note.linkedNoteIds.forEach(targetId => {
         const target = notes.find(n => n.id === targetId);
         if (!target) return;
-        const chip = mkEl('button', 'meta-chip note-link-chip');
-        const ico = mkEl('span', 'tag-icon'); ico.innerHTML = ${jsSvg.noteLinkIcon};
-        const label = mkEl('span', '', target.title);
-        const unlinkBtn = mkEl('span', 'note-link-unlink');
+        const chip = makeChip('button', 'note-link-chip', ${jsSvg.noteLinkIcon}, target.title, 'chip-label');
+        chip.title = target.title;
+        const unlinkBtn = mkEl('span', 'chip-remove');
         unlinkBtn.innerHTML = ${jsSvg.unlinkSmall};
         unlinkBtn.title = 'Remove link';
-        chip.title = target.title;
-        chip.append(ico, label, unlinkBtn);
+        chip.appendChild(unlinkBtn);
         chip.addEventListener('click', e => {
           if (e.target === unlinkBtn || unlinkBtn.contains(e.target)) {
             e.stopPropagation();
@@ -4371,38 +4427,27 @@ export class SidebarView implements vscode.WebviewViewProvider {
     }
 
     if (note.shared) {
-      const badge = mkEl('span', 'meta-chip shared-badge');
-      const shareIco = mkEl('span', 'tag-icon'); shareIco.innerHTML = ${jsSvg.share};
-      badge.append(shareIco, mkEl('span', '', 'Shared'));
+      const badge = makeChip('span', 'shared-badge', ${jsSvg.shareSmall}, 'Shared');
       badge.setAttribute('aria-label', 'This note is shared');
       row2.appendChild(badge);
     }
 
     if (note.conflicted) {
-      const badge = mkEl('button', 'meta-chip conflict-badge');
-      const conflictIco = mkEl('span', 'tag-icon'); conflictIco.innerHTML = ${jsSvg.conflictIcon};
-      badge.append(conflictIco, mkEl('span', '', 'Conflict — click to resolve'));
+      const badge = makeChip('button', 'conflict-badge', ${jsSvg.conflictIcon}, 'Conflict — click to resolve');
       badge.setAttribute('aria-label', 'Merge conflict — click to open conflict resolution');
-      badge.addEventListener('click', e => {
-        e.stopPropagation();
-        vscode.postMessage({ type: 'openConflict', noteId: note.id });
-      });
+      badge.addEventListener('click', e => { e.stopPropagation(); vscode.postMessage({ type: 'openConflict', noteId: note.id }); });
       row2.appendChild(badge);
     }
 
     if (note.archived) {
-      const ab = mkEl('span', 'meta-chip archived-badge');
-      const archiveIco = mkEl('span', 'tag-icon'); archiveIco.innerHTML = ${jsSvg.archiveIcon};
-      ab.append(archiveIco, mkEl('span', '', 'Archived'));
+      const ab = makeChip('span', 'archived-badge', ${jsSvg.archiveIcon}, 'Archived');
       ab.setAttribute('aria-label', 'This note is archived');
       row2.appendChild(ab);
     }
 
     if (note.remindAt) {
       const isOverdue = note.remindAt <= Date.now();
-      const badge = mkEl('span', 'meta-chip reminder-badge' + (isOverdue ? ' overdue' : ''));
-      const bellIco = mkEl('span', 'tag-icon'); bellIco.innerHTML = ${jsSvg.bellSmall};
-      badge.append(bellIco, mkEl('span', '', formatReminder(note.remindAt)));
+      const badge = makeChip('span', 'reminder-badge' + (isOverdue ? ' overdue' : ''), ${jsSvg.bellSmall}, formatReminder(note.remindAt));
       badge.title = isOverdue ? 'Overdue — click bell to reschedule' : new Date(note.remindAt).toLocaleString();
       row2.appendChild(badge);
     }
@@ -4410,57 +4455,34 @@ export class SidebarView implements vscode.WebviewViewProvider {
     if (note.github) {
       const gh     = note.github;
       const status = gh.status ?? 'open';
-      const badge  = mkEl('button', \`meta-chip github-badge gh-\${status}\`);
-      const ghIco  = mkEl('span', 'tag-icon');
-      ghIco.innerHTML = gh.type === 'pr'
+      const ghIcon = gh.type === 'pr'
         ? (status === 'merged' ? ${jsSvg.ghPrMerged} : status === 'closed' ? ${jsSvg.ghPrClosed} : ${jsSvg.ghPrOpen})
         : (status === 'closed' || status === 'merged' ? ${jsSvg.ghIssueClosed} : ${jsSvg.ghIssueOpen});
-      const typeLabel = gh.type === 'pr' ? 'PR' : '#';
-      const label  = mkEl('span', '', \`\${typeLabel}\${gh.number} \${status}\`);
-      badge.title  = gh.title ? gh.title : gh.url;
-      badge.append(ghIco, label);
-      badge.addEventListener('click', e => {
-        e.stopPropagation();
-        vscode.postMessage({ type: 'openGitHubLink', url: gh.url });
-      });
+      const badge = makeChip('button', \`github-badge gh-\${status}\`, ghIcon, \`\${gh.type === 'pr' ? 'PR' : '#'}\${gh.number} \${status}\`);
+      badge.title = gh.title || gh.url;
+      badge.addEventListener('click', e => { e.stopPropagation(); vscode.postMessage({ type: 'openGitHubLink', url: gh.url }); });
       row2.appendChild(badge);
     }
 
     if (note.codeLink) {
-      const chip = mkEl('button', 'meta-chip code-link-chip' + (note.codeLinkStale ? ' stale' : ''));
-      const shortName = note.codeLink.file.split('/').pop() || note.codeLink.file;
+      const shortName  = note.codeLink.file.split('/').pop() || note.codeLink.file;
       const staleTitle = note.codeLink.file + ':' + note.codeLink.line + ' — file not found';
-      chip.title = note.codeLinkStale
-        ? staleTitle
-        : note.codeLink.file + ':' + note.codeLink.line + ' — click to jump';
-      chip.setAttribute('aria-label', note.codeLinkStale
-        ? 'Broken link: ' + staleTitle
-        : 'Jump to ' + note.codeLink.file + ' line ' + note.codeLink.line
-      );
-      const codeIco = mkEl('span', 'tag-icon'); codeIco.innerHTML = ${jsSvg.codeLinkIcon};
-      const chipLabel = mkEl('span', '', shortName + ':' + note.codeLink.line);
-      chip.append(codeIco, chipLabel);
+      const chip = makeChip('button', 'code-link-chip' + (note.codeLinkStale ? ' stale' : ''), ${jsSvg.codeLinkIcon}, shortName + ':' + note.codeLink.line, 'chip-label');
+      chip.title = note.codeLinkStale ? staleTitle : note.codeLink.file + ':' + note.codeLink.line + ' — click to jump';
+      chip.setAttribute('aria-label', note.codeLinkStale ? 'Broken link: ' + staleTitle : 'Jump to ' + note.codeLink.file + ' line ' + note.codeLink.line);
       if (!note.codeLinkStale) {
-        chip.addEventListener('click', e => {
-          e.stopPropagation();
-          vscode.postMessage({ type: 'jumpToLink', file: note.codeLink.file, line: note.codeLink.line });
-        });
-        const removeBtn = mkEl('span', 'code-link-remove');
+        chip.addEventListener('click', e => { e.stopPropagation(); vscode.postMessage({ type: 'jumpToLink', file: note.codeLink.file, line: note.codeLink.line }); });
+        const removeBtn = mkEl('span', 'chip-remove');
         removeBtn.innerHTML = ${jsSvg.unlinkSmall};
         removeBtn.title = 'Remove code link';
-        removeBtn.addEventListener('click', e => {
-          e.stopPropagation();
-          vscode.postMessage({ type: 'removeCodeLink', noteId: note.id });
-        });
+        removeBtn.addEventListener('click', e => { e.stopPropagation(); vscode.postMessage({ type: 'removeCodeLink', noteId: note.id }); });
         chip.appendChild(removeBtn);
       }
       row2.appendChild(chip);
     }
 
     if (note.branch) {
-      const chip = mkEl('span', 'meta-chip branch-chip');
-      const ico = mkEl('span', 'tag-icon'); ico.innerHTML = ${jsSvg.branchSmall};
-      chip.append(ico, mkEl('span', '', note.branch));
+      const chip = makeChip('span', 'branch-chip', ${jsSvg.branchSmall}, note.branch);
       chip.title = 'Branch: ' + note.branch;
       row2.appendChild(chip);
     }
@@ -4468,14 +4490,41 @@ export class SidebarView implements vscode.WebviewViewProvider {
     const hasChips = note.tags.length > 0
       || (note.linkedNoteIds && note.linkedNoteIds.length > 0)
       || note.codeLink || note.github || note.remindAt || note.conflicted || note.archived || note.branch;
+
+    // Tag picker — shared by ghost button (empty card) and overflow "Add tag"
+    let pendingTags = [...note.tags];
+    let onPendingTagsChanged = null;
+
+    const picker = mkEl('div', 'draft-tag-picker card-tag-picker');
+    picker.style.display = 'none';
+    picker.addEventListener('click', e => e.stopPropagation());
+
+    buildTagPicker(picker, () => pendingTags, (id) => {
+      pendingTags = pendingTags.includes(id) ? pendingTags.filter(i => i !== id) : [...pendingTags, id];
+      if (onPendingTagsChanged) onPendingTagsChanged();
+    });
+
+    function openTagPicker() {
+      pendingTags = [...note.tags];
+      picker.querySelectorAll('.tag-chip').forEach(c => {
+        c.classList.toggle('active', pendingTags.includes(c.dataset.tid));
+      });
+      picker.style.display = '';
+      cardTagPickerCommit = () => {
+        if (pendingTags.slice().sort().join() !== note.tags.slice().sort().join()) {
+          vscode.postMessage({ type: 'updateNote', id: note.id, changes: { tags: pendingTags } });
+        }
+      };
+    }
+
+    card._openTagPicker = () => { closeAllPops(); openTagPicker(); };
+
     if (!hasChips) {
       const pillsArea = mkEl('div', 'draft-pills');
       row2.appendChild(pillsArea);
 
       const ghost = mkEl('button', 'tag-ghost');
       ghost.title = 'Add tag';
-
-      let pendingTags = [...note.tags];
 
       function updateRow2Pills() {
         pillsArea.innerHTML = '';
@@ -4485,44 +4534,28 @@ export class SidebarView implements vscode.WebviewViewProvider {
           const pill = mkEl('span', 'tag-pill');
           applyPillStyle(pill, tag.color);
           if (tag.iconSvg) { const ico = mkEl('span', 'tag-icon'); ico.innerHTML = tag.iconSvg; pill.appendChild(ico); }
-          pill.appendChild(mkEl('span', '', tag.label));
+          pill.appendChild(mkEl('span', 'chip-label', tag.label));
           pillsArea.appendChild(pill);
         });
         ghost.innerHTML = pendingTags.length === 0 ? ${jsSvg.tagSmall} + 'tag' : ${jsSvg.tagSmall};
       }
       updateRow2Pills();
-
-      const picker = mkEl('div', 'draft-tag-picker card-tag-picker');
-      picker.style.display = 'none';
-      picker.addEventListener('click', e => e.stopPropagation());
-
-      buildTagPicker(picker, () => pendingTags, (id) => {
-        pendingTags = pendingTags.includes(id) ? pendingTags.filter(i => i !== id) : [...pendingTags, id];
-        updateRow2Pills();
-      });
+      onPendingTagsChanged = updateRow2Pills;
 
       ghost.addEventListener('click', e => {
         e.stopPropagation();
         const isOpen = picker.style.display !== 'none';
         closeAllPops();
         if (!isOpen) {
-          pendingTags = [...note.tags];
-          picker.querySelectorAll('.tag-chip').forEach(c => {
-            c.classList.toggle('active', pendingTags.includes(c.dataset.tid));
-          });
+          openTagPicker();
           updateRow2Pills();
-          picker.style.display = '';
-          cardTagPickerCommit = () => {
-            if (pendingTags.slice().sort().join() !== note.tags.slice().sort().join()) {
-              vscode.postMessage({ type: 'updateNote', id: note.id, changes: { tags: pendingTags } });
-            }
-          };
         }
       });
 
       row2.appendChild(ghost);
-      row2.appendChild(picker);
     }
+
+    row2.appendChild(picker);
 
     card.appendChild(row2);
 
@@ -4754,6 +4787,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
       edit:    ${jsSvg.edit},
       remind:  ${jsSvg.remind},
       dup:     ${jsSvg.dup},
+      tag:     ${jsSvg.tagSmall},
       link:    ${jsSvg.codeLinkMenu},
       unlink:  ${jsSvg.unlink},
       archive: ${jsSvg.archive},
@@ -4775,6 +4809,11 @@ export class SidebarView implements vscode.WebviewViewProvider {
 
     item(SVG.remind, note.remindAt ? 'Change reminder' : 'Set reminder', '',
       () => { vscode.postMessage({ type: 'setReminder', noteId: note.id }); closeAllPops(); });
+
+    item(SVG.tag, 'Add tag', '', () => {
+      const cardEl = document.querySelector('.card[data-id="' + note.id + '"]');
+      if (cardEl?._openTagPicker) cardEl._openTagPicker();
+    });
 
     divider();
 
@@ -4919,7 +4958,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
       chip.type = 'button';
       chip.dataset.tid = tag.id;
       if (tag.iconSvg) { const ico = mkEl('span', 'tag-icon'); ico.innerHTML = tag.iconSvg; chip.appendChild(ico); }
-      chip.appendChild(mkEl('span', '', tag.label));
+      chip.appendChild(mkEl('span', 'chip-text', tag.label));
       const applyStyle = active => {
         chip.classList.toggle('active', active);
         applyChipStyle(chip, tag.color, active);
@@ -4963,6 +5002,13 @@ export class SidebarView implements vscode.WebviewViewProvider {
     const el = document.createElement(tag);
     if (cls)  el.className = cls;
     if (text) el.textContent = text;
+    return el;
+  }
+
+  function makeChip(tag, cls, iconSvg, text, textCls = 'chip-text') {
+    const el  = mkEl(tag, 'meta-chip ' + cls);
+    const ico = mkEl('span', 'tag-icon'); ico.innerHTML = iconSvg;
+    el.append(ico, mkEl('span', textCls, text));
     return el;
   }
 

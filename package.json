@@ -90,6 +90,11 @@
         "command": "devnotes.focusSidebar",
         "title": "Open DevNotes Sidebar",
         "category": "DevNotes"
+      },
+      {
+        "command": "devnotes.previewChips",
+        "title": "Preview Chip Styles",
+        "category": "DevNotes"
       }
     ],
     "keybindings": [
