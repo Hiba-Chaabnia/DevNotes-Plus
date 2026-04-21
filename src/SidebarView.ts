@@ -108,9 +108,23 @@ export class SidebarView implements vscode.WebviewViewProvider {
   private _branchFilterActive  = false;
   private _githubConnected     = false;
   private _mcpRegistered       = false;
+  private _staleLinkCache = new Map<string, boolean>(); // key: `${noteId}:${file}`
+  private _pushTimer: ReturnType<typeof setTimeout> | undefined;
+
   isBranchFilterActive(): boolean  { return this._branchFilterActive; }
   isGithubConnected(): boolean     { return this._githubConnected; }
   isMcpRegisteredState(): boolean  { return this._mcpRegistered; }
+
+  /** Evict stale-link cache entries. Pass a noteId to evict only that note; omit to clear all. */
+  invalidateStaleLinkCache(noteId?: string): void {
+    if (noteId === undefined) {
+      this._staleLinkCache.clear();
+    } else {
+      for (const key of this._staleLinkCache.keys()) {
+        if (key.startsWith(`${noteId}:`)) this._staleLinkCache.delete(key);
+      }
+    }
+  }
 
   setMcpRegistered(val: boolean): void {
     this._mcpRegistered = val;
@@ -187,6 +201,12 @@ export class SidebarView implements vscode.WebviewViewProvider {
     this.view = webviewView;
 
     const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
+
+    // Sync GitHub token state once on view init; connectGitHub/disconnectGitHub keep it current after that
+    if (wsRoot) {
+      this._githubConnected = fs.existsSync(path.join(wsRoot.fsPath, '.devnotes', '.github-token'));
+    }
+
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: [
@@ -223,30 +243,22 @@ export class SidebarView implements vscode.WebviewViewProvider {
   }
 
   push(): void {
+    clearTimeout(this._pushTimer);
+    this._pushTimer = setTimeout(() => this._flush(), 16);
+  }
+
+  private _flush(): void {
     if (!this.view?.visible) return;
     const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
 
-    // Refresh GitHub connection status from the token file
-    if (wsRoot) {
-      const tokenFile = path.join(wsRoot.fsPath, '.devnotes', '.github-token');
-      this._githubConnected = fs.existsSync(tokenFile);
-    }
-
     const notes = this.storage.getNotes().map(n => {
       if (!n.codeLink || !wsRoot) return n;
-      const absPath = path.join(wsRoot.fsPath, n.codeLink.file);
-      return { ...n, codeLinkStale: !fs.existsSync(absPath) };
+      const cacheKey = `${n.id}:${n.codeLink.file}`;
+      if (!this._staleLinkCache.has(cacheKey)) {
+        this._staleLinkCache.set(cacheKey, !fs.existsSync(path.join(wsRoot.fsPath, n.codeLink.file)));
+      }
+      return this._staleLinkCache.get(cacheKey) ? { ...n, codeLinkStale: true } : n;
     });
-
-    if (wsRoot && this.view) {
-      this.view.webview.options = {
-        enableScripts: true,
-        localResourceRoots: [
-          vscode.Uri.joinPath(this.context.extensionUri, 'media'),
-          vscode.Uri.joinPath(wsRoot, '.devnotes', 'assets'),
-        ],
-      };
-    }
 
     const imageUriMap: Record<string, string> = {};
     if (wsRoot) {
@@ -393,6 +405,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
 
       case 'updateNote': {
         const prevShared = this.storage.getNote(msg.id)?.shared;
+        if ('codeLink' in msg.changes) this.invalidateStaleLinkCache(msg.id);
         await this.storage.updateNote(msg.id, msg.changes);
         this.push();
 
@@ -527,6 +540,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
           break;
         }
         const line = editor.selection.active.line + 1;
+        this.invalidateStaleLinkCache(msg.noteId);
         await this.storage.updateNote(msg.noteId, { codeLink: { file: filePath, line } });
         this.push();
         this.onNoteLinkChanged();
@@ -534,6 +548,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
       }
 
       case 'removeCodeLink':
+        this.invalidateStaleLinkCache(msg.noteId);
         await this.storage.updateNote(msg.noteId, { codeLink: undefined });
         this.push();
         this.onNoteLinkChanged();

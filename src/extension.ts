@@ -133,6 +133,7 @@ async function _activate(context: vscode.ExtensionContext): Promise<void> {
 
   // Sync all surfaces when notes change due to external file edits (e.g. git pull)
   storage.onExternalChange = () => {
+    sidebar.invalidateStaleLinkCache(); // workspace files may have changed
     sidebar.push();
     EditorPanel.current?.push();
     gutterController.refresh();

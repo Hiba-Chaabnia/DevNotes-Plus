@@ -54,11 +54,11 @@ export interface Tag {
 }
 
 export const DEFAULT_TAGS: Tag[] = [
-  { id: 'idea',      label: 'Idea',      color: '#FFD166', icon: 'Lightbulb'    },
-  { id: 'todo',      label: 'Todo',      color: '#06D6D6', icon: 'ListTodo'     },
-  { id: 'bug',       label: 'Bug',       color: '#EF6C57', icon: 'Bug'          },
-  { id: 'meeting',   label: 'Meeting',   color: '#B5A4E8', icon: 'Presentation' },
-  { id: 'reference', label: 'Reference', color: '#74B9FF', icon: 'BookMarked'   },
+  { id: 'idea',      label: 'Idea',      color: '#FFDE5A', icon: 'Lightbulb'    },
+  { id: 'todo',      label: 'Todo',      color: '#43B4FB', icon: 'ListTodo'     },
+  { id: 'bug',       label: 'Bug',       color: '#FF524D', icon: 'Bug'          },
+  { id: 'meeting',   label: 'Meeting',   color: '#DB95FD', icon: 'Presentation' },
+  { id: 'reference', label: 'Reference', color: '#31B54C', icon: 'BookMarked'   },
 ];
 
 // ─── Frontmatter (mirrors Frontmatter.ts exactly) ────────────────────────────
