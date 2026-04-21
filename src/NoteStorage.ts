@@ -459,7 +459,7 @@ export class NoteStorage {
       if (idx === -1) this.notes.push(note);
       else            this.notes[idx] = note;
     } finally {
-      setTimeout(() => this.selfWrites.delete(id), 500);
+      setTimeout(() => this.selfWrites.delete(id), 5000);
     }
   }
 
@@ -496,16 +496,11 @@ export class NoteStorage {
       updatedAt : Date.now(),
     };
 
-    // Write via the normal note serialisation path
-    this.selfWrites.add(id);
-    try {
-      await this.doWriteNote(merged);
-      const idx = this.notes.findIndex(n => n.id === id);
-      if (idx === -1) this.notes.push(merged);
-      else            this.notes[idx] = merged;
-    } finally {
-      // selfWrites is cleared inside doWriteNote's finally block
-    }
+    // Write via the normal note serialisation path (doWriteNote manages selfWrites)
+    await this.doWriteNote(merged);
+    const idx = this.notes.findIndex(n => n.id === id);
+    if (idx === -1) this.notes.push(merged);
+    else            this.notes[idx] = merged;
   }
 
   // ── Private: folder setup ─────────────────────────────────────────────────
@@ -656,7 +651,7 @@ export class NoteStorage {
       );
     } finally {
       // Clear after a short delay — watcher events arrive asynchronously
-      setTimeout(() => this.selfWrites.delete(note.id), 500);
+      setTimeout(() => this.selfWrites.delete(note.id), 5000);
     }
   }
 
@@ -785,7 +780,8 @@ export class NoteStorage {
     const reload = async (uri: vscode.Uri): Promise<void> => {
       const fileName = uri.path.split('/').pop() ?? '';
       const id = fileName.endsWith('.md') ? fileName.slice(0, -3) : '';
-      if (!id || this.selfWrites.has(id)) return;
+      if (!id) return;
+      if (this.selfWrites.has(id)) { this.selfWrites.delete(id); return; }
       try {
         const raw  = dec.decode(await vscode.workspace.fs.readFile(uri));
         const note = this.parseNoteFile(raw, fileName);
@@ -800,7 +796,8 @@ export class NoteStorage {
     const evict = (uri: vscode.Uri): void => {
       const fileName = uri.path.split('/').pop() ?? '';
       const id = fileName.endsWith('.md') ? fileName.slice(0, -3) : '';
-      if (!id || this.selfWrites.has(id)) return;
+      if (!id) return;
+      if (this.selfWrites.has(id)) { this.selfWrites.delete(id); return; }
       const before = this.notes.length;
       this.notes = this.notes.filter(n => n.id !== id);
       if (this.notes.length !== before) this.onExternalChange?.();
