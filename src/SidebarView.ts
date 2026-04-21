@@ -1706,6 +1706,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
     max-width: 0;
     overflow: hidden;
     opacity: 0;
+    transform: translateY(1px);
     transition: max-width .15s, opacity .1s, margin-left .15s;
   }
   .tag-pill:hover .chip-remove,
@@ -2220,7 +2221,9 @@ export class SidebarView implements vscode.WebviewViewProvider {
     min-width: 0;
     transform: translateY(1px);
   }
-  .chip-text, .tag-chip-label { transform: translateY(1px); }
+  .tag-chip-label,
+  .conflict-badge .chip-text,
+  .github-badge .chip-text { transform: translateY(1px); }
   .code-link-chip {
     background: rgba(67,180,251,.18);
     border-color: ${NC.blue};
@@ -4149,8 +4152,10 @@ if (searchQuery) {
 
     // ── Reminders ──
     group('Reminder', [
-      makeChip('span', 'reminder-badge',         ${jsSvg.bellSmall}, 'in 2h'  ),
-      makeChip('span', 'reminder-badge overdue', ${jsSvg.bellSmall}, '3d ago' ),
+      makeChip('span', 'reminder-badge',         ${jsSvg.bellSmall}, 'Tomorrow' ),
+      makeChip('span', 'reminder-badge',         ${jsSvg.bellSmall}, 'Jan 15'   ),
+      makeChip('span', 'reminder-badge overdue', ${jsSvg.bellSmall}, '2h overdue'),
+      makeChip('span', 'reminder-badge overdue', ${jsSvg.bellSmall}, '3d overdue'),
     ]);
 
     // ── Status badges ──
@@ -5100,11 +5105,19 @@ if (searchQuery) {
   }
 
   function formatReminder(ts) {
-    const now  = new Date();
-    const d    = new Date(ts);
-    if (ts <= Date.now()) return 'Overdue';
-    if (d.toDateString() === now.toDateString()) return 'Today';
-    const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
+    const now = Date.now();
+    if (ts <= now) {
+      const diff = now - ts;
+      const mins = Math.floor(diff / 60000);
+      if (mins < 60)  return mins <= 1 ? '1m overdue' : mins + 'm overdue';
+      const hrs = Math.floor(diff / 3600000);
+      if (hrs < 24)   return hrs + 'h overdue';
+      return Math.floor(diff / 86400000) + 'd overdue';
+    }
+    const d        = new Date(ts);
+    const today    = new Date();
+    if (d.toDateString() === today.toDateString()) return 'Today';
+    const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
     if (d.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   }
