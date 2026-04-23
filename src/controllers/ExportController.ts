@@ -1,35 +1,27 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { Note, Tag, NOTE_COLORS } from '../services/NoteStorage';
+import * as fs from 'fs';
+import { Note } from '../services/NoteStorage';
 import { UI_COLORS, EXPORT_COLORS as EX } from '../utils/colors';
 
 // ─── Public entry point ───────────────────────────────────────────────────────
 
-/**
- * Shows a format picker then exports the given notes as a Markdown file,
- * HTML file, or clipboard copy.
- */
-export async function runExport(notes: Note[], tags: Tag[]): Promise<void> {
+export async function runExport(notes: Note[], devnotesDir?: string): Promise<void> {
   if (notes.length === 0) {
     vscode.window.showInformationMessage('DevNotes: nothing to export.');
     return;
   }
 
-  type FmtItem = vscode.QuickPickItem & { fmt: 'markdown' | 'html' | 'clipboard' };
+  type FmtItem = vscode.QuickPickItem & { fmt: 'html' | 'clipboard' };
   const items: FmtItem[] = [
     {
-      label      : '$(markdown) Markdown file',
-      description: '.md — readable in any editor or wiki',
-      fmt        : 'markdown',
-    },
-    {
       label      : '$(globe) HTML file',
-      description: '.html — styled, shareable with non-developers',
+      description: '.html — styled, self-contained, images included',
       fmt        : 'html',
     },
     {
       label      : '$(clippy) Copy to clipboard',
-      description: 'Markdown — paste into Slack, Notion, GitHub…',
+      description: 'Markdown text — paste into Slack, Notion, GitHub…',
       fmt        : 'clipboard',
     },
   ];
@@ -39,34 +31,37 @@ export async function runExport(notes: Note[], tags: Tag[]): Promise<void> {
   });
   if (!picked) return;
 
-  const content = picked.fmt === 'html'
-    ? toHtml(notes, tags)
-    : toMarkdown(notes, tags);
-
   // ── Clipboard ──────────────────────────────────────────────────────────
   if (picked.fmt === 'clipboard') {
-    await vscode.env.clipboard.writeText(content);
+    const hasImages = notes.some(n => /!\[[^\]]*\]\(\.devnotes\/assets\//.test(n.content));
+    if (hasImages) {
+      const confirm = await vscode.window.showWarningMessage(
+        'This note contains images that cannot be included in a clipboard copy. The text will be copied without them.',
+        'Copy anyway',
+        'Cancel',
+      );
+      if (confirm !== 'Copy anyway') return;
+    }
+    await vscode.env.clipboard.writeText(toMarkdown(notes));
     vscode.window.showInformationMessage(
       `Copied ${notes.length} note${notes.length > 1 ? 's' : ''} to clipboard.`
     );
     return;
   }
 
-  // ── Save to file ───────────────────────────────────────────────────────
-  const ext      = picked.fmt === 'html' ? 'html' : 'md';
+  // ── Save HTML to file ──────────────────────────────────────────────────
+  const imageMap = devnotesDir ? buildImageMap(notes, devnotesDir) : new Map<string, string>();
   const baseName = notes.length === 1
     ? notes[0].title.replace(/[^a-z0-9]+/gi, '-').toLowerCase().slice(0, 60)
     : 'devnotes-export';
 
   const uri = await vscode.window.showSaveDialog({
-    defaultUri: vscode.Uri.file(`${baseName}.${ext}`),
-    filters    : picked.fmt === 'html'
-      ? { 'HTML Files': ['html'] }
-      : { 'Markdown Files': ['md'] },
+    defaultUri: vscode.Uri.file(`${baseName}.html`),
+    filters    : { 'HTML Files': ['html'] },
   });
   if (!uri) return;
 
-  await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(content));
+  await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(toHtml(notes, imageMap)));
 
   const action = await vscode.window.showInformationMessage(
     `Exported ${notes.length} note${notes.length > 1 ? 's' : ''} to ${path.basename(uri.fsPath)}`,
@@ -77,44 +72,23 @@ export async function runExport(notes: Note[], tags: Tag[]): Promise<void> {
   }
 }
 
-// ─── Markdown formatter ───────────────────────────────────────────────────────
+// ─── Clipboard Markdown formatter ────────────────────────────────────────────
 
-function toMarkdown(notes: Note[], tags: Tag[]): string {
-  const lines: string[] = [];
-  const now = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
-
-  if (notes.length > 1) {
-    lines.push(`# DevNotes Export`, ``, `*${notes.length} notes exported on ${now}*`, ``);
-  }
-
-  for (const note of notes) {
-    lines.push(`# ${note.title}`, ``);
-    if (note.content.trim()) lines.push(note.content.trim(), ``);
-
-    const meta: string[] = [];
-    if (note.tags.length > 0) {
-      meta.push(`**Tags:** ${note.tags.map(id => tagLabel(id, tags)).join(', ')}`);
-    }
-    if (note.branch)   meta.push(`**Branch:** ${note.branch}`);
-    if (note.remindAt) meta.push(`**Reminder:** ${formatDate(note.remindAt)}`);
-    meta.push(`**Created:** ${formatDate(note.createdAt)}`);
-    meta.push(`**Updated:** ${formatDate(note.updatedAt)}`);
-
-    lines.push(meta.join('  \n'), ``, `---`, ``);
-  }
-
-  if (notes.length > 1) {
-    lines.push(`*Generated by DevNotes*`);
-  }
-
-  return lines.join('\n');
+function toMarkdown(notes: Note[]): string {
+  const parts = notes.map(note => {
+    const lines: string[] = [`# ${note.title}`, ``];
+    const body = note.content.trim().replace(/!\[[^\]]*\]\(\.devnotes\/assets\/[^)]+\)\n?/g, '');
+    if (body.trim()) lines.push(body.trim(), ``);
+    return lines.join('\n');
+  });
+  return parts.join('\n---\n\n');
 }
 
 // ─── HTML formatter ───────────────────────────────────────────────────────────
 
-function toHtml(notes: Note[], tags: Tag[]): string {
+function toHtml(notes: Note[], imageMap: Map<string, string>): string {
   const now  = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
-  const body = notes.map(n => noteToHtml(n, tags)).join('\n');
+  const body = notes.map(n => noteToHtml(n, imageMap)).join('\n');
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -141,8 +115,6 @@ function toHtml(notes: Note[], tags: Tag[]): string {
   .note-body pre code{background:none;padding:0}
   .note-body blockquote{border-left:3px solid ${EX.blockquoteBorder};margin:.7em 0;padding-left:1em;color:${EX.mutedText}}
   .note-body input[type=checkbox]{margin-right:6px}
-  .note-meta{margin-top:20px;padding-top:14px;border-top:1px solid ${EX.border};font-size:12px;color:${EX.mutedText};display:flex;flex-wrap:wrap;gap:10px}
-  .tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600;color:${UI_COLORS.text};margin-right:3px}
   .footer{text-align:center;font-size:12px;color:${UI_COLORS.muted};margin-top:40px}
 </style>
 </head>
@@ -159,42 +131,27 @@ function toHtml(notes: Note[], tags: Tag[]): string {
 </html>`;
 }
 
-function noteToHtml(note: Note, tags: Tag[]): string {
-  const color  = NOTE_COLORS[note.color] ?? NOTE_COLORS.yellow;
-  const tagPills = note.tags
-    .map(id => {
-      const t = tags.find(t => t.id === id);
-      return t ? `<span class="tag" style="background:${esc(t.color)}">${esc(t.label)}</span>` : '';
-    })
-    .join('');
-
-  const metaParts: string[] = [];
-  if (tagPills) metaParts.push(`<span>Tags: ${tagPills}</span>`);
-  if (note.branch) metaParts.push(`<span>Branch: ${esc(note.branch)}</span>`);
-  if (note.codeLink) metaParts.push(`<span>Linked: ${esc(note.codeLink.file)}:${note.codeLink.line}</span>`);
-  if (note.remindAt) metaParts.push(`<span>Reminder: ${esc(formatDate(note.remindAt))}</span>`);
-  metaParts.push(`<span>Created: ${esc(formatDate(note.createdAt))}</span>`);
-  metaParts.push(`<span>Updated: ${esc(formatDate(note.updatedAt))}</span>`);
-
-  return `<div class="note" style="border-left:4px solid ${color}">
+function noteToHtml(note: Note, imageMap: Map<string, string>): string {
+  return `<div class="note">
   <div class="note-title">${esc(note.title)}</div>
-  <div class="note-body">${mdToHtml(note.content)}</div>
-  <div class="note-meta">${metaParts.join('\n  ')}</div>
+  <div class="note-body">${mdToHtml(note.content, imageMap)}</div>
 </div>`;
 }
 
 // ─── Markdown → HTML (basic converter for export) ─────────────────────────────
 
-function mdToHtml(md: string): string {
+function mdToHtml(md: string, imageMap: Map<string, string> = new Map()): string {
   if (!md.trim()) return '';
   const lines  = md.split('\n');
   let   out    = '';
-  let   inList = false;
+  let   inList      = false;
+  let   inOrderedList = false;
   let   inCode = false;
   let   codeAccum = '';
 
   const closeList = (): void => {
-    if (inList) { out += '</ul>\n'; inList = false; }
+    if (inList)        { out += '</ul>\n';  inList = false; }
+    if (inOrderedList) { out += '</ol>\n';  inOrderedList = false; }
   };
 
   const inline = (s: string): string =>
@@ -232,8 +189,26 @@ function mdToHtml(md: string): string {
 
     const li = line.match(/^[-*] (.*)/);
     if (li) {
+      if (inOrderedList) { out += '</ol>\n'; inOrderedList = false; }
       if (!inList) { out += '<ul>\n'; inList = true; }
       out += `<li>${inline(li[1])}</li>\n`;
+      continue;
+    }
+
+    const oli = line.match(/^\d+\. (.*)/);
+    if (oli) {
+      if (inList) { out += '</ul>\n'; inList = false; }
+      if (!inOrderedList) { out += '<ol>\n'; inOrderedList = true; }
+      out += `<li>${inline(oli[1])}</li>\n`;
+      continue;
+    }
+
+    const img = line.match(/^!\[([^\]]*)\]\(([^)]+)\)/);
+    if (img) {
+      closeList();
+      const alt = esc(img[1]);
+      const src = imageMap.get(img[2]) ?? esc(img[2]);
+      out += `<img src="${src}" alt="${alt}" style="max-width:100%;border-radius:5px;margin:.7em 0;display:block">\n`;
       continue;
     }
 
@@ -249,21 +224,40 @@ function mdToHtml(md: string): string {
     out += `<p>${inline(line)}</p>\n`;
   }
   closeList();
+  if (inCode) {
+    out += `<pre><code>${esc(codeAccum.replace(/\n$/, ''))}</code></pre>\n`;
+  }
   return out;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function tagLabel(id: string, tags: Tag[]): string {
-  return tags.find(t => t.id === id)?.label ?? id;
-}
-
-function formatDate(ts: number): string {
-  return new Date(ts).toLocaleDateString(undefined, {
-    year: 'numeric', month: 'short', day: 'numeric',
-  });
-}
-
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Reads every .devnotes/assets/ image referenced by the given notes and
+// returns a map of relative path → base64 data URI for HTML embedding.
+function buildImageMap(notes: Note[], devnotesDir: string): Map<string, string> {
+  const map  = new Map<string, string>();
+  const seen = new Set<string>();
+
+  for (const note of notes) {
+    const matches = note.content.matchAll(/!\[[^\]]*\]\((\.devnotes\/assets\/([^)]+))\)/g);
+    for (const m of matches) {
+      const relPath  = m[1];
+      const filename = m[2];
+      if (seen.has(relPath)) continue;
+      seen.add(relPath);
+      try {
+        const absPath = path.join(devnotesDir, 'assets', filename);
+        const data    = fs.readFileSync(absPath);
+        const ext     = path.extname(filename).slice(1).toLowerCase() || 'png';
+        const mime    = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
+        map.set(relPath, `data:${mime};base64,${data.toString('base64')}`);
+      } catch { /* image missing or unreadable — leave path as-is */ }
+    }
+  }
+
+  return map;
 }
