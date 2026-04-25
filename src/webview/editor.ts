@@ -10,12 +10,14 @@
  */
 
 import { Editor, Extension } from '@tiptap/core';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 import StarterKit from '@tiptap/starter-kit';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import Image from '@tiptap/extension-image';
 import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
+import { TableKit } from '@tiptap/extension-table';
 import { Markdown } from 'tiptap-markdown';
 
 // ── Globals injected by EditorPanel.ts before this script loads ──────────────
@@ -38,6 +40,90 @@ function listDepth(editor: Editor): number {
 }
 
 // Runs before StarterKit's Tab handler (priority 1000 > default 100).
+// Keeps a zero-width space (​) in every empty paragraph so tiptap-markdown
+// serialises it as a real line rather than collapsing it.  When the user
+// types into the paragraph the placeholder is stripped automatically.
+const BlankParaPreserver = Extension.create({
+  name: 'blankParaPreserver',
+  // Higher priority so our Backspace/Delete shortcuts fire before StarterKit's.
+  priority: 200,
+
+  addKeyboardShortcuts() {
+    const isBlankPara = () => {
+      const { $from } = this.editor.state.selection;
+      return $from.parent.type.name === 'paragraph' && $from.parent.textContent === '​';
+    };
+    const joinBlankUp = (): boolean => {
+      if (!isBlankPara()) return false;
+      const { state } = this.editor;
+      const { $from }  = state.selection;
+      const paraPos    = $from.before($from.depth); // doc position of blank node
+      const paraSize   = $from.parent.nodeSize;     // 3 = open + ​ + close
+
+      // joinBackward() requires cursor at offset 0. Move it there first.
+      // Selection-only transactions are not recorded in undo history.
+      this.editor.commands.setTextSelection($from.start($from.depth));
+
+      if (this.editor.commands.joinBackward()) return true;
+
+      // joinBackward failed — the blank paragraph is the first node.
+      // Do NOT call joinForward: it would merge two consecutive blank paragraphs
+      // into one (still a blank), causing an apparent "double press" effect.
+      // Instead, delete the node directly so it vanishes in a single keystroke.
+      if (state.doc.content.size > paraSize) {
+        this.editor.view.dispatch(
+          this.editor.state.tr.delete(paraPos, paraPos + paraSize)
+        );
+        return true;
+      }
+      return true; // only node in document — consume but do nothing
+    };
+    return {
+      Backspace: joinBlankUp,
+      Delete:    joinBlankUp,
+    };
+  },
+
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey('blankParaPreserver'),
+        appendTransaction(transactions, _old, newState) {
+          // Skip selection-only state changes — no doc content to fix.
+          if (!transactions.some(t => t.docChanged)) return null;
+          const tr = newState.tr;
+          let modified = false;
+          newState.doc.forEach((node, pos) => {
+            if (node.type.name !== 'paragraph') return;
+            const text = node.textContent;
+            if (text === '') {
+              // Empty paragraph — insert placeholder so the serialiser sees it
+              tr.insertText('​', pos + 1);
+              modified = true;
+            } else if (text !== '​' && text.includes('​')) {
+              // Real content mixed with placeholder — delete each ​ character
+              // individually (right-to-left) so ProseMirror maps the cursor to
+              // the correct position rather than snapping it to the range end.
+              const toDelete: number[] = [];
+              node.forEach((child, offset) => {
+                if (!child.isText) return;
+                for (let i = 0; i < child.text!.length; i++) {
+                  if (child.text![i] === '​') toDelete.push(pos + 1 + offset + i);
+                }
+              });
+              for (let i = toDelete.length - 1; i >= 0; i--) {
+                tr.delete(toDelete[i], toDelete[i] + 1);
+                modified = true;
+              }
+            }
+          });
+          return modified ? tr : null;
+        },
+      }),
+    ];
+  },
+});
+
 // Returns true (event consumed) when already at max depth so StarterKit
 // cannot sink further.
 const IndentLimiter = Extension.create({
@@ -55,6 +141,65 @@ const IndentLimiter = Extension.create({
     };
   },
 });
+
+// ── Underline ↔ markdown bridge ───────────────────────────────────────────────
+// Standard markdown has no underline syntax. We store underline as ++text++ in
+// note files (compatible with the sidebar card renderer), but tiptap-markdown
+// doesn't understand that syntax. These helpers convert between the two forms
+// so round-trips through the editor are lossless.
+
+function toEditorMd(md: string): string {
+  // Underline: ++text++ → <u>text</u>
+  let result = md.replace(/\+\+(.+?)\+\+/g, '<u>$1</u>');
+
+  // tiptap-markdown requires non-empty content after [ ] / [x] to recognise
+  // a task item. Pad empty task items with a ZWS so the parser creates a real
+  // task node; fromEditorMd strips it back before saving.
+  result = result.replace(/^(- \[[ x]\] *)$/gm, '$1​');
+
+  // tiptap-markdown needs \n\n between paragraphs to create separate nodes.
+  // Our storage uses \n (from htmlToMarkdown). Insert a blank line between
+  // consecutive regular-paragraph lines so Tiptap doesn't merge them.
+  const lines = result.split('\n');
+  const out: string[] = [];
+  let inCode = false;
+  const isStructural = (l: string) =>
+    l.trim() === '' || /^([-*] |\d+\. |#{1,6} |>|```)/.test(l);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.startsWith('```')) inCode = !inCode;
+    out.push(line);
+    if (!inCode && !isStructural(line) && i < lines.length - 1) {
+      const next = lines[i + 1];
+      if (!isStructural(next)) out.push('');
+    }
+  }
+  return out.join('\n')
+    // Convert intentional blank paragraphs to zero-width space placeholders so
+    // Tiptap creates real (invisible) empty nodes — one placeholder per blank para.
+    .replace(/\n{3,}/g, (match) => {
+      const blanks = Math.floor(match.length / 2) - 1;
+      return '\n\n' + '​\n\n'.repeat(blanks);
+    });
+}
+
+function fromEditorMd(md: string): string {
+  return md
+    // Convert underline spans; skip if content is only whitespace/newlines
+    .replace(/<u>([\s\S]*?)<\/u>/g, (_, inner) => {
+      const c = inner.trim();
+      return c ? `++${c}++` : '';
+    })
+    // Remove lone formatting markers that appear between paragraph breaks
+    // (tiptap-markdown emits these for empty paragraphs with an active mark)
+    .replace(/\n\n(\*{4}|\*\*|\*|\+{4}|\+\+)\n\n/g, '\n\n')
+    .replace(/^(\*{4}|\*\*|\*|\+{4}|\+\+)$/gm, '')
+    // Strip ZWS padding added to empty task items for tiptap-markdown compatibility
+    .replace(/^(- \[[ x]\] *)​/gm, '$1')
+    // Restore blank paragraph placeholders: removing ​ leaves the surrounding
+    // \n\n…\n\n intact (≥3 newlines), which simpleMarkdown renders as a visual gap
+    .replace(/^​$/gm, '');
+}
 
 // ── Bootstrap ────────────────────────────────────────────────────────────────
 (function main() {
@@ -91,15 +236,17 @@ const IndentLimiter = Extension.create({
       Image.configure({ inline: false, allowBase64: true }),
       Underline,
       Link.configure({ openOnClick: false, autolink: true }),
+      TableKit,
       IndentLimiter,
+      BlankParaPreserver,
       Markdown.configure({
-        html: false,
+        html: true,
         linkify: true,
         transformCopiedText: true,
         transformPastedText: true,
       }),
     ],
-    content: typeof __INITIAL_CONTENT__ !== 'undefined' ? __INITIAL_CONTENT__ : '',
+    content: typeof __INITIAL_CONTENT__ !== 'undefined' ? toEditorMd(__INITIAL_CONTENT__) : '',
     autofocus: true,
     editorProps: {
       attributes: {
@@ -135,7 +282,7 @@ const IndentLimiter = Extension.create({
 
   function save() {
     const storage = editor.storage as unknown as Record<string, { getMarkdown(): string }>;
-    const md = storage['markdown'].getMarkdown();
+    const md = fromEditorMd(storage['markdown'].getMarkdown());
     vscode.postMessage({ type: 'save', content: md });
     statusEl.textContent = 'Saved';
   }
@@ -235,7 +382,7 @@ const IndentLimiter = Extension.create({
         break;
       case 'saveAsTemplate': {
         const mdStorage = editor.storage as unknown as Record<string, { getMarkdown(): string }>;
-        vscode.postMessage({ type: 'saveAsTemplate', content: mdStorage['markdown'].getMarkdown() });
+        vscode.postMessage({ type: 'saveAsTemplate', content: fromEditorMd(mdStorage['markdown'].getMarkdown()) });
         break;
       }
     }
@@ -245,14 +392,14 @@ const IndentLimiter = Extension.create({
   window.addEventListener('message', ({ data }) => {
     if (data?.type === 'setContent') {
       // Pass emitUpdate:false so auto-save doesn't fire on programmatic updates
-      editor.commands.setContent(data.content ?? '', { emitUpdate: false } as never);
+      editor.commands.setContent(toEditorMd(data.content ?? ''), { emitUpdate: false } as never);
       if (titleEl && data.title !== undefined) {
         titleEl.value = data.title;
       }
     }
     if (data?.type === 'insertTemplate') {
       // emitUpdate fires onUpdate → schedules auto-save so the template content persists
-      editor.commands.setContent(data.content ?? '');
+      editor.commands.setContent(toEditorMd(data.content ?? ''));
       statusEl.textContent = 'Unsaved…';
     }
     if (data?.type === 'insertImage') {

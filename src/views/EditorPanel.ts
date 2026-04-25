@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { NoteStorage, BUILTIN_TEMPLATES } from '../services/NoteStorage';
+import { NoteStorage } from '../services/NoteStorage';
 import { PLATFORM_COLORS } from '../utils/colors';
-import type { IconNode as LucideNode } from 'lucide';
+import { svgIcon, getNonce } from '../utils/webview';
 import {
   Bold, Italic, Underline, Strikethrough, Code, Code2, Link,
   Heading1, Heading2, Heading3,
@@ -19,6 +19,8 @@ export class EditorPanel {
   private readonly panel: vscode.WebviewPanel;
   private readonly disposables: vscode.Disposable[] = [];
   readonly noteId: string;
+
+  private disposed = false;
 
   // Maps webview-safe image URIs → workspace-relative storage paths.
   // Populated when images are pasted or when a note with images is loaded.
@@ -48,6 +50,7 @@ export class EditorPanel {
   // ── Push updated content (e.g. after external file change) ─────────────
 
   push(): void {
+    if (this.disposed) return;
     const note = this.storage.getNote(this.noteId);
     if (!note) return;
     this.panel.webview.postMessage({
@@ -55,7 +58,7 @@ export class EditorPanel {
       content: this.toDisplayContent(note.content),
       title  : note.title,
     });
-    this.panel.title = `✏ ${note.title}`;
+    this.panel.title = `Editor — ${note.title}`;
   }
 
   // ── Constructor ─────────────────────────────────────────────────────────
@@ -149,6 +152,7 @@ export class EditorPanel {
     );
 
     this.panel.onDidDispose(() => {
+      this.disposed = true;
       EditorPanel.current = undefined;
       this.disposables.forEach(d => d.dispose());
     }, null, this.disposables);
@@ -214,8 +218,8 @@ export class EditorPanel {
 
   private buildHtml(editorJsUri: vscode.Uri, cspSource: string, initialContent: string, initialTitle: string): string {
     const nonce   = getNonce();
-    const content = JSON.stringify(initialContent);
-    const title   = JSON.stringify(initialTitle);
+    const content = JSON.stringify(initialContent).replace(/<\/script>/gi, '<\\/script>');
+    const title   = JSON.stringify(initialTitle).replace(/<\/script>/gi, '<\\/script>');
     const ico = {
       bold:        svgIcon(Bold),
       italic:      svgIcon(Italic),
@@ -245,6 +249,10 @@ export class EditorPanel {
       grpBlocks:    svgIcon(Layers),
       grpTemplates: svgIcon(LayoutTemplate),
     };
+
+    const checkmarkUri = 'data:image/svg+xml,' + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+    );
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -379,10 +387,11 @@ export class EditorPanel {
   .ProseMirror ul, .ProseMirror ol { padding-left: 1.6em; margin-bottom: .75em; }
   .ProseMirror li { margin: 2px 0; }
   .ProseMirror blockquote {
-    border-left: 3px solid var(--vscode-panel-border);
+    border-left: 3px solid rgba(128,128,128,.35);
     margin: .75em 0;
-    padding-left: 1em;
-    opacity: .8;
+    padding: 2px 10px;
+    background: rgba(128,128,128,.06);
+    border-radius: 0 3px 3px 0;
   }
   .ProseMirror hr {
     border: none;
@@ -412,6 +421,27 @@ export class EditorPanel {
   .ProseMirror ul[data-type="taskList"] { list-style: none; padding-left: 0; }
   .ProseMirror ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 8px; }
   .ProseMirror ul[data-type="taskList"] li > label { margin-top: 3px; flex-shrink: 0; }
+  .ProseMirror ul[data-type="taskList"] input[type="checkbox"] {
+    appearance: none; -webkit-appearance: none;
+    width: 13px; height: 13px; flex-shrink: 0;
+    background: transparent;
+    border: 1.5px solid var(--vscode-editor-foreground);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background .1s, border-color .1s;
+  }
+  .ProseMirror ul[data-type="taskList"] input[type="checkbox"]:checked {
+    background: var(--vscode-button-background);
+    border-color: var(--vscode-button-background);
+    background-image: url('${checkmarkUri}');
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+  .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div,
+  .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > p {
+    text-decoration: line-through;
+    opacity: 0.5;
+  }
 
   /* ── Images ── */
   .ProseMirror img {
@@ -510,17 +540,3 @@ export class EditorPanel {
   }
 }
 
-// ─── Utilities ───────────────────────────────────────────────────────────────
-
-function svgIcon(nodes: LucideNode, size = 14): string {
-  const inner = nodes.map(([tag, attrs]) => {
-    const a = Object.entries(attrs).map(([k, v]) => `${k}="${v}"`).join(' ');
-    return `<${tag} ${a}/>`;
-  }).join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
-}
-
-function getNonce(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  return Array.from({ length: 32 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-}
