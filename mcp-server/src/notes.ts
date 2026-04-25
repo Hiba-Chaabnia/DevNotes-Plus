@@ -31,7 +31,6 @@ export interface Note {
   id: string;
   title: string;
   content: string;
-  color: string;
   tags: string[];
   starred: boolean;
   shared?: boolean;
@@ -77,8 +76,7 @@ function parseFrontmatter(raw: string): { meta: Record<string, unknown>; body: s
     if (val === 'true')  { meta[key] = true;  continue; }
     if (val === 'false') { meta[key] = false; continue; }
     if (val === '')      { meta[key] = '';    continue; }
-    const num = Number(val);
-    meta[key] = Number.isNaN(num) ? val : num;
+    meta[key] = /^-?(0|[1-9]\d*)$/.test(val) ? Number(val) : val;
   }
 
   return { meta, body: match[2] };
@@ -117,7 +115,6 @@ function parseNoteFile(raw: string, fileName: string): Note | null {
       id,
       title    : String(meta.title  ?? 'Untitled'),
       content  : body,
-      color    : String(meta.color  ?? 'yellow'),
       tags     : meta.tags ? String(meta.tags).split(',').filter(Boolean) : [],
       starred  : meta.starred === true,
       shared   : meta.shared  === true || undefined,
@@ -195,7 +192,6 @@ export function writeNote(devnotesDir: string, note: Note): void {
   const meta: Record<string, unknown> = {
     id       : note.id,
     title    : note.title,
-    color    : note.color,
     tags     : note.tags.join(','),
     starred  : note.starred,
     createdAt: note.createdAt,
@@ -226,6 +222,7 @@ export function writeNote(devnotesDir: string, note: Note): void {
     'utf-8'
   );
   invalidateCache(devnotesDir);
+  updateGitignore(devnotesDir, note.id, note.shared === true);
 }
 
 export function deleteNote(devnotesDir: string, id: string): boolean {
@@ -236,13 +233,46 @@ export function deleteNote(devnotesDir: string, id: string): boolean {
   return true;
 }
 
+function updateGitignore(devnotesDir: string, id: string, shared: boolean): void {
+  const gitignorePath = path.join(devnotesDir, '.gitignore');
+  if (!fs.existsSync(gitignorePath)) return;
+  try {
+    const content  = fs.readFileSync(gitignorePath, 'utf-8');
+    const noteEntry = `!${id}.md`;
+    const lines = content
+      .split(/\r?\n/)
+      .filter(l => l.trim() !== '' || l === '*')
+      .filter(l => l.trim() !== noteEntry);
+
+    if (shared) {
+      if (!lines.includes('!.gitignore')) lines.push('!.gitignore');
+      if (!lines.includes('!tags.json'))  lines.push('!tags.json');
+      lines.push(noteEntry);
+    }
+    fs.writeFileSync(gitignorePath, lines.join('\n') + '\n', 'utf-8');
+  } catch { /* best-effort */ }
+}
+
 export function readTags(devnotesDir: string): Tag[] {
   const tagsPath = path.join(devnotesDir, 'tags.json');
   if (!fs.existsSync(tagsPath)) return [...DEFAULT_TAGS];
   try {
-    const custom: Tag[] = JSON.parse(fs.readFileSync(tagsPath, 'utf-8'));
-    const customIds = new Set(custom.map(t => t.id));
-    return [...DEFAULT_TAGS.filter(t => !customIds.has(t.id)), ...custom];
+    const parsed = JSON.parse(fs.readFileSync(tagsPath, 'utf-8'));
+    // Support both the legacy plain-array format and the current object format
+    const custom: Tag[] = Array.isArray(parsed) ? parsed : (parsed.tags ?? []);
+    const order: string[] | undefined = Array.isArray(parsed) ? undefined : parsed.order;
+    const deletedIds: string[] = Array.isArray(parsed) ? [] : (parsed.deletedDefaultIds ?? []);
+    const deletedSet = new Set(deletedIds);
+    const customIds  = new Set(custom.map((t: Tag) => t.id));
+    const merged = [
+      ...DEFAULT_TAGS.filter(t => !customIds.has(t.id) && !deletedSet.has(t.id)),
+      ...custom,
+    ];
+    if (order) {
+      const rank = new Map(order.map((id, i) => [id, i]));
+      merged.sort((a, b) => (rank.get(a.id) ?? Infinity) - (rank.get(b.id) ?? Infinity));
+    }
+    return merged;
   } catch {
     return [...DEFAULT_TAGS];
   }

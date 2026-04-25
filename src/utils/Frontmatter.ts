@@ -39,8 +39,10 @@ function parseValue(val: string): unknown {
   if (val === 'true')  return true;
   if (val === 'false') return false;
   if (val === '')      return '';
-  const num = Number(val);
-  if (!Number.isNaN(num)) return num;
+  // Only coerce values that are unambiguously integers with no leading zeros.
+  // Leading-zero strings (e.g. "007") and non-integer numerics are kept as
+  // strings so that owner/branch fields are never silently converted to numbers.
+  if (/^-?(0|[1-9]\d*)$/.test(val)) return Number(val);
   return val;
 }
 

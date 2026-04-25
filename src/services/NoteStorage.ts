@@ -22,7 +22,6 @@ export interface GitHubLink {
 export interface Template {
   id: string;
   name: string;
-  color?: string;    // key from NOTE_COLORS — pre-selects the color when applied
   tags?: string[];   // tag IDs — pre-selects tags when applied
   content: string;   // markdown body
 }
@@ -31,7 +30,6 @@ export interface Note {
   id: string;
   title: string;
   content: string;       // stored as markdown
-  color: string;         // key from NOTE_COLORS
   tags: string[];        // array of Tag ids
   starred: boolean;
   shared?: boolean;      // when true, note file is un-ignored in .devnotes/.gitignore
@@ -69,42 +67,36 @@ export const BUILTIN_TEMPLATES: Template[] = [
   {
     id: 'tpl-bug',
     name: 'Bug Report',
-    color: 'orange',
     tags: ['bug'],
     content: '## Steps to Reproduce\n1. \n\n## Expected Behavior\n\n## Actual Behavior\n\n## Environment\n- OS: \n- Version: ',
   },
   {
     id: 'tpl-adr',
     name: 'ADR',
-    color: 'purple',
     tags: ['reference'],
     content: '## Context\n\n## Decision\n\n## Consequences\n',
   },
   {
     id: 'tpl-meeting',
     name: 'Meeting Notes',
-    color: 'blue',
     tags: ['meeting'],
     content: '## Attendees\n- \n\n## Decisions\n- \n\n## Action Items\n- [ ] ',
   },
   {
     id: 'tpl-standup',
     name: 'Standup',
-    color: 'green',
     tags: ['todo'],
     content: '## Done\n- \n\n## Doing\n- \n\n## Blocked\n- ',
   },
   {
     id: 'tpl-feature',
     name: 'Feature Spec',
-    color: 'cyan',
     tags: ['idea'],
     content: '## Goal\n\n## Acceptance Criteria\n- [ ] \n\n## Notes\n\n## Open Questions\n- ',
   },
   {
     id: 'tpl-review',
     name: 'Code Review',
-    color: 'yellow',
     tags: ['reference'],
     content: '## What to Check\n- [ ] \n\n## Findings\n\n## Decision\n',
   },
@@ -114,6 +106,7 @@ export interface ConflictVersions {
   ours       : Note;
   theirs     : Note;
   incomingRef: string; // branch name or commit hash from the >>>>>>> line
+  oursRef    : string; // current branch name or short commit hash
 }
 
 // ─── Conflict helpers (module-level) ─────────────────────────────────────────
@@ -204,12 +197,14 @@ export class NoteStorage {
   private templatesWriteInflight = 0;
 
   private readonly folder: vscode.Uri;
+  private readonly workspaceRoot: vscode.Uri;
 
   constructor(
     workspaceRoot: vscode.Uri,
     private readonly legacyWorkspaceState: vscode.Memento,
     private readonly legacyGlobalState:   vscode.Memento,
   ) {
+    this.workspaceRoot = workspaceRoot;
     this.folder = vscode.Uri.joinPath(workspaceRoot, '.devnotes');
   }
 
@@ -286,12 +281,11 @@ export class NoteStorage {
 
   // ── Notes ─────────────────────────────────────────────────────────────────
 
-  async createNote(partial: { title: string; color?: string; tags?: string[]; codeLink?: CodeLink; content?: string; branch?: string; owner?: string }): Promise<Note> {
+  async createNote(partial: { title: string; tags?: string[]; codeLink?: CodeLink; content?: string; branch?: string; owner?: string }): Promise<Note> {
     const note: Note = {
       id       : generateId(),
       title    : partial.title,
       content  : partial.content ?? '',
-      color    : partial.color ?? 'yellow',
       tags     : partial.tags  ?? [],
       starred  : false,
       codeLink : partial.codeLink,
@@ -308,6 +302,9 @@ export class NoteStorage {
   async updateNote(id: string, changes: Partial<Omit<Note, 'id' | 'createdAt'>>): Promise<void> {
     const idx = this.notes.findIndex(n => n.id === id);
     if (idx === -1) return;
+    // Never overwrite a conflicted file — the raw conflict markers must stay on disk
+    // until the user resolves them through the conflict panel.
+    if (this.notes[idx].conflicted) return;
     this.notes[idx] = { ...this.notes[idx], ...changes, updatedAt: Date.now() };
     await this.writeNote(this.notes[idx]);
     if ('shared' in changes) {
@@ -316,10 +313,10 @@ export class NoteStorage {
   }
 
   async deleteNote(id: string): Promise<void> {
-    this.notes = this.notes.filter(n => n.id !== id);
     try {
       await vscode.workspace.fs.delete(this.noteUri(id));
     } catch { /* already gone */ }
+    this.notes = this.notes.filter(n => n.id !== id);
     await this.updateGitignore(id, false);
   }
 
@@ -374,14 +371,14 @@ export class NoteStorage {
 
   // ── Templates ─────────────────────────────────────────────────────────────
 
-  async addTemplate(partial: { name: string; color?: string; tags?: string[]; content: string }): Promise<Template> {
+  async addTemplate(partial: { name: string; tags?: string[]; content: string }): Promise<Template> {
     const template: Template = { id: generateId(), ...partial };
     this.templates = [...this.templates, template];
     await this.writeTemplates();
     return template;
   }
 
-  async updateTemplate(id: string, changes: Partial<Pick<Template, 'name' | 'color' | 'tags' | 'content'>>): Promise<void> {
+  async updateTemplate(id: string, changes: Partial<Pick<Template, 'name' | 'tags' | 'content'>>): Promise<void> {
     const idx = this.templates.findIndex(t => t.id === id);
     if (idx === -1) return;
     this.templates[idx] = { ...this.templates[idx], ...changes };
@@ -416,7 +413,19 @@ export class NoteStorage {
       const theirsNote = this.parseNoteFile(resolveConflictRaw(raw, 'theirs'), `${id}.md`);
       if (!oursNote || !theirsNote) return null;
 
-      return { ours: oursNote, theirs: theirsNote, incomingRef: incoming };
+      // Read current branch from VS Code's built-in git extension
+      let oursRef = 'HEAD';
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const gitExt = vscode.extensions.getExtension<any>('vscode.git');
+        if (gitExt?.isActive) {
+          const repo = gitExt.exports.getAPI(1).getRepository(this.workspaceRoot);
+          const head = repo?.state?.HEAD;
+          oursRef = head?.name ?? (head?.commit ? String(head.commit).slice(0, 7) : 'HEAD');
+        }
+      } catch { /* fall back to 'HEAD' */ }
+
+      return { ours: oursNote, theirs: theirsNote, incomingRef: incoming, oursRef };
     } catch {
       return null;
     }
@@ -487,7 +496,7 @@ export class NoteStorage {
       mergedContent = `${oursContent}\n\n---\n\n${theirsContent}`;
     }
 
-    // Single-value fields (color, title, branch, etc.) come from ours
+    // Single-value fields (title, branch, etc.) come from ours
     const merged: Note = {
       ...oursNote,
       tags      : mergedTags,
@@ -497,6 +506,39 @@ export class NoteStorage {
     };
 
     // Write via the normal note serialisation path (doWriteNote manages selfWrites)
+    await this.doWriteNote(merged);
+    const idx = this.notes.findIndex(n => n.id === id);
+    if (idx === -1) this.notes.push(merged);
+    else            this.notes[idx] = merged;
+  }
+
+  async resolveConflictMerged(id: string, mergedData: { title: string; tags: string[]; content: string }): Promise<void> {
+    const prev  = this.writeQueues.get(id) ?? Promise.resolve();
+    const next  = prev.then(() => this.doMergeConflictCustom(id, mergedData));
+    const entry = next.catch(() => {}).finally(() => {
+      if (this.writeQueues.get(id) === entry) this.writeQueues.delete(id);
+    });
+    this.writeQueues.set(id, entry);
+    return next;
+  }
+
+  private async doMergeConflictCustom(id: string, mergedData: { title: string; tags: string[]; content: string }): Promise<void> {
+    const uri = this.noteUri(id);
+    const raw = dec.decode(await vscode.workspace.fs.readFile(uri));
+    if (!hasConflict(raw)) return;
+
+    const oursNote = this.parseNoteFile(resolveConflictRaw(raw, 'ours'), `${id}.md`);
+    if (!oursNote) return;
+
+    const merged: Note = {
+      ...oursNote,
+      title     : mergedData.title,
+      tags      : mergedData.tags,
+      content   : mergedData.content,
+      conflicted: undefined,
+      updatedAt : Date.now(),
+    };
+
     await this.doWriteNote(merged);
     const idx = this.notes.findIndex(n => n.id === id);
     if (idx === -1) this.notes.push(merged);
@@ -567,10 +609,9 @@ export class NoteStorage {
         id,
         title    : String(meta.title    ?? 'Untitled'),
         content  : body,
-        color    : String(meta.color    ?? 'yellow'),
         tags     : meta.tags ? String(meta.tags).split(',').filter(Boolean) : [],
         starred  : meta.starred  === true,
-        shared   : meta.shared   === true,
+        shared   : meta.shared   === true || undefined,
         codeLink : (typeof meta.codeLink_file === 'string' && meta.codeLink_file && meta.codeLink_line !== undefined)
           ? { file: meta.codeLink_file, line: Number(meta.codeLink_line) }
           : undefined,
@@ -621,7 +662,6 @@ export class NoteStorage {
       const meta: Record<string, unknown> = {
         id       : note.id,
         title    : note.title,
-        color    : note.color,
         tags     : note.tags.join(','),
         starred  : note.starred,
         createdAt: note.createdAt,

@@ -1,43 +1,23 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
-import { NoteStorage, Note, Tag, Template, GitHubLink, NOTE_COLORS, DEFAULT_TAGS } from '../services/NoteStorage';
-import { EditorPanel } from './EditorPanel';
-import { UI_COLORS as C, GH_COLORS as GH, NOTE_COLORS as NC, RGB, PLATFORM_COLORS as PLATFORM } from '../utils/colors';
+import { NoteStorage, Note, Tag, GitHubLink, DEFAULT_TAGS } from '../services/NoteStorage';
+import { UI_COLORS as C, GH_COLORS as GH, NOTE_COLORS as NC, RGB } from '../utils/colors';
+import { svgIcon, getNonce } from '../utils/webview';
 import { detectProjectIdentity } from '../services/GitDetector';
 import { parsePRUrl, parseGitHubOwnerRepo, githubFetchPR, githubCreateIssue } from '../services/GitHubClient';
 import {
   Plus, Search, X, Ellipsis, User, Archive, Clock, LayoutList, Bot,
-  SquarePen, Bell, Copy, Link2, Unlink2, Share2, Download,
+  SquarePen, Bell, Copy, Link2, Unlink2, Share2, SquareArrowOutUpRight,
   Trash2, GitBranch, ArrowLeftRight, Star, FolderGit, FolderOpen,
-  ClockArrowDown, ArrowDownAZ, Tag as TagIcon,
-  Lightbulb, ListTodo, Bug, Presentation, BookMarked,
-  Link, FileSymlink, TriangleAlert,
+  ClockArrowDown, ArrowDownAZ, Tag as TagIcon, FileSymlink, TriangleAlert,
   GitPullRequest, GitPullRequestClosed, GitMerge, CircleDot, CircleCheck,
   Bold, Italic, Underline, Strikethrough,
   List, ListOrdered, ListChecks, Code, Code2, Indent, Outdent, RemoveFormatting, Check,
   ChevronDown, ChevronUp,
-  Braces, Hash, Variable, Binary, Regex, SearchCode,
-  FileCode, FileJson, FileText,
-  GitCommit, GitFork,
-  Server, Database, Cloud, Cpu, HardDrive, Network, Globe, Wifi, Container,
-  Terminal, Package, Layers, Workflow, Settings, Settings2, Wrench, Hammer,
-  Webhook, Cable, Blocks, Component,
-  Lock, Unlock, Shield, ShieldCheck, Key,
-  Zap, Box, BookOpen, Files,
+  Settings, Files,
   PenLine, Shapes, Palette, Ban,
 } from 'lucide';
 import type { IconNode as LucideNode } from 'lucide';
 import * as AllLucide from 'lucide';
-
-// ─── Lucide icon helper ───────────────────────────────────────────────────────
-
-function svgIcon(nodes: LucideNode, size = 14, style = '', fill = 'none'): string {
-  const inner = nodes.map(([tag, attrs]) => {
-    const a = Object.entries(attrs).map(([k, v]) => `${k}="${v}"`).join(' ');
-    return `<${tag} ${a}/>`;
-  }).join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"${style ? ` style="${style}"` : ''}>${inner}</svg>`;
-}
 
 function githubSvg(size = 14): string {
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.34-3.369-1.34-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>`;
@@ -53,7 +33,7 @@ const ALL_LUCIDE_NODES: Record<string, LucideNode> = Object.fromEntries(
 
 type ToExt =
   | { type: 'ready' }
-  | { type: 'createNote'; title: string; color: string; tags: string[]; templateId?: string; branch?: string; body?: string; codeLink?: { file: string; line: number } }
+  | { type: 'createNote'; title: string; tags: string[]; templateId?: string; branch?: string; body?: string; codeLink?: { file: string; line: number } }
   | { type: 'requestCodeLink' }
   | { type: 'setBranchScope'; noteId: string; branch: string | null }
   | { type: 'branchFilterChanged'; active: boolean }
@@ -191,6 +171,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
     private readonly storage: NoteStorage,
     private readonly onOpenEditor: (noteId: string) => void,
     private readonly onNoteLinkChanged: () => void = () => {},
+    private readonly onNoteUpdated: (noteId: string) => void = () => {},
   ) {}
 
   setProjectName(name: string): void {
@@ -343,7 +324,6 @@ export class SidebarView implements vscode.WebviewViewProvider {
           : undefined;
         await this.storage.createNote({
           title   : msg.title,
-          color   : msg.color,
           tags    : msg.tags,
           content : msg.body || tpl?.content,
           branch  : msg.branch,
@@ -434,6 +414,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
         if ('codeLink' in msg.changes) this.invalidateStaleLinkCache(msg.id);
         await this.storage.updateNote(msg.id, msg.changes);
         this.push();
+        this.onNoteUpdated(msg.id);
 
         if ('shared' in msg.changes) {
           const note = this.storage.getNote(msg.id);
@@ -608,7 +589,6 @@ export class SidebarView implements vscode.WebviewViewProvider {
         await this.storage.createNote({
           title  : `Copy of ${src.title}`,
           content: src.content,
-          color  : src.color,
           tags   : [...src.tags],
           branch : src.branch,
           owner  : this.currentUser,
@@ -841,7 +821,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
         break;
 
       case 'openFolder':
-        vscode.commands.executeCommand('workbench.action.openRecent');
+        vscode.commands.executeCommand('workbench.action.files.openFolder');
         break;
 
       case 'registerMcp':
@@ -877,7 +857,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
 
   private buildHtml(webview: vscode.Webview): string {
     const nonce             = getNonce();
-    const colorsJson        = JSON.stringify(NOTE_COLORS);
+    const colorsJson        = JSON.stringify(NC);
     const defaultTagIconsJson = JSON.stringify(
       ['Lightbulb', 'ListTodo', 'Bug', 'Presentation', 'BookMarked']
         .filter(n => !!ALL_LUCIDE_NODES[n])
@@ -904,7 +884,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
       unlink:      JSON.stringify(svgIcon(Unlink2,   14)),
       archive:     JSON.stringify(svgIcon(Archive,   14)),
       share:       JSON.stringify(svgIcon(Share2,    14)),
-      export:      JSON.stringify(svgIcon(Download,  14)),
+      export:      JSON.stringify(svgIcon(SquareArrowOutUpRight, 14)),
       trash:       JSON.stringify(svgIcon(Trash2,    14)),
       overflow:    JSON.stringify(svgIcon(Ellipsis,  14)),
       star:        JSON.stringify(svgIcon(Star,      14)),
@@ -1011,6 +991,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
     font-weight: 600;
     padding: 2px 8px 2px 6px;
     border-radius: 10px;
+    border: 1px solid transparent;
     background: var(--vscode-badge-background);
     color: var(--vscode-badge-foreground);
     min-width: 0;
@@ -1023,6 +1004,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
     height: 20px;
   }
   .project-pill:hover {
+    border-color: currentColor;
     background: var(--vscode-button-secondaryBackground, rgba(255,255,255,.12));
     color: var(--vscode-button-secondaryForeground, var(--vscode-badge-foreground));
   }
@@ -1048,13 +1030,27 @@ export class SidebarView implements vscode.WebviewViewProvider {
     inset: 0;
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 2px 8px 2px 6px;
     overflow: hidden;
     opacity: 0;
     transform: translateY(5px);
     transition: opacity .15s, transform .15s;
     font-style: italic;
+  }
+  .pill-action-inner {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .pill-copy { display: flex; align-items: center; gap: 4px; padding-left: 6px; }
+  .pill-sep { opacity: .35; padding: 0 5px; }
+  .project-pill:hover .pill-action-inner,
+  .branch-pill.can-switch:hover .pill-action-inner {
+    animation: pill-marquee 2.5s linear .15s infinite;
+  }
+  @keyframes pill-marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-33.333%); }
   }
 
   .new-note-pill {
@@ -1085,11 +1081,13 @@ export class SidebarView implements vscode.WebviewViewProvider {
     align-items: center;
     justify-content: center;
     opacity: .7;
+    flex-shrink: 0;
   }
   .icon-btn:hover { opacity: 1; background: var(--vscode-toolbar-hoverBackground); }
 
   .search-row {
     flex: 1;
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -1100,6 +1098,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
   }
   .search-row input {
     flex: 1;
+    min-width: 0;
     border: none;
     background: transparent;
     color: var(--vscode-input-foreground);
@@ -1484,9 +1483,15 @@ export class SidebarView implements vscode.WebviewViewProvider {
     padding: 0;
     min-width: 0;
     cursor: text;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .card-title:focus {
     border-bottom: 1.5px solid var(--vscode-focusBorder);
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
   }
 
   .card-row-2 {
@@ -1533,7 +1538,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
     pointer-events: none;
   }
   .card-preview p { margin: 0 0 4px; }
-  .card-preview blockquote { margin: 0 0 4px 1.2em; padding: 0; border: none; background: none; }
+  .card-preview blockquote { margin: 0 0 4px 0; padding: 2px 8px; border-left: 3px solid rgba(128,128,128,.35); background: rgba(128,128,128,.06); border-radius: 0 2px 2px 0; }
   .card-preview ul, .card-preview ol { padding-left: 1.2em; margin: 0 0 4px; }
   .card-preview li { margin: 1px 0; }
   .card-preview code {
@@ -1546,9 +1551,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
   .card-preview strong { font-weight: 700; }
   .card-preview em { font-style: italic; }
   .card-preview.clamped {
-    display: -webkit-box;
-    -webkit-line-clamp: 5;
-    -webkit-box-orient: vertical;
+    max-height: 8em;
     overflow: hidden;
   }
 
@@ -1556,7 +1559,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
   .card-preview[contenteditable="true"] {
     user-select: text;
     outline: none;
-    -webkit-line-clamp: unset;
+    max-height: none;
     display: block;
     overflow: visible;
   }
@@ -1565,7 +1568,8 @@ export class SidebarView implements vscode.WebviewViewProvider {
     cursor: pointer;
     opacity: .5;
     color: var(--card-text);
-    display: none;
+    display: flex;
+    visibility: hidden;
     justify-content: flex-end;
     user-select: none;
   }
@@ -1640,6 +1644,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
     transition: opacity .1s, background .1s;
   }
   .card-fmt-btn:hover { opacity: 1; background: rgba(128,128,128,.12); }
+  .card-fmt-btn.active { opacity: 1; color: var(--vscode-button-background); }
   .card-fmt-sep { flex: 1; min-width: 4px; }
   .card-fmt-done {
     background: none;
@@ -1677,10 +1682,11 @@ export class SidebarView implements vscode.WebviewViewProvider {
 
   /* Task / checklist items */
   .task-list { list-style: none; padding-left: 4px; margin: 2px 0; }
-  .task-item { display: flex; align-items: center; gap: 5px; }
+  .task-item { display: flex; align-items: flex-start; gap: 5px; }
   .task-item input[type="checkbox"] {
     appearance: none; -webkit-appearance: none;
     cursor: pointer; width: 13px; height: 13px; flex-shrink: 0;
+    margin-top: 3px;
     background: transparent;
     border: 1.5px solid var(--card-text); border-radius: 2px;
     transition: background .1s, border-color .1s;
@@ -1702,8 +1708,8 @@ export class SidebarView implements vscode.WebviewViewProvider {
     padding: 4px 6px; font-family: monospace; font-size: .85em;
     margin: 2px 0; white-space: pre-wrap;
   }
-  .card-preview ol  { padding-left: 18px; margin: 2px 0; }
-  .card-preview ul:not(.task-list) { padding-left: 18px; margin: 2px 0; }
+  .card-preview ol  { list-style: decimal; padding-left: 18px; margin: 2px 0; }
+  .card-preview ul:not(.task-list) { list-style: disc; padding-left: 18px; margin: 2px 0; }
 
   /* Format bar separator between button groups */
   .card-fmt-sep-bar {
@@ -2110,6 +2116,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
     font-size: 10px;
     padding: 1px 6px 1px 5px;
     border-radius: 10px;
+    border: 1px solid transparent;
     background: var(--vscode-badge-background);
     color: var(--vscode-badge-foreground);
     min-width: 0;
@@ -2124,12 +2131,13 @@ export class SidebarView implements vscode.WebviewViewProvider {
 
   .branch-pill.can-switch { cursor: pointer; }
   .branch-pill.can-switch:hover {
+    border-color: currentColor;
     background: var(--vscode-button-secondaryBackground, rgba(255,255,255,.12));
     color: var(--vscode-button-secondaryForeground, var(--vscode-badge-foreground));
   }
   .branch-pill.can-switch:hover .pill-primary { opacity: 0; transform: translateY(-5px); }
   .branch-pill.can-switch:hover .pill-action  { opacity: 1; transform: translateY(0); }
-  .branch-pill .pill-action { padding: 1px 6px 1px 5px; }
+  .branch-pill .pill-copy { padding-left: 5px; }
 
 
   .branch-filter-btn.active { color: var(--vscode-button-background) !important; opacity: 1; }
@@ -2218,7 +2226,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
     max-width: 56px;
   }
   .mine-filter-btn.active { color: var(--vscode-button-background) !important; opacity: 1; }
-  .stale-filter-btn.active { color: ${NC.orange} !important; opacity: 1; }
+  .stale-filter-btn.active { color: var(--vscode-button-background) !important; opacity: 1; }
 
   /* ── Conflict / shared indicators ───────────────────── */
   .conflict-badge { background: rgba(224,82,82,.2);    border-color: ${C.danger};       color: ${C.danger}; }
@@ -2578,7 +2586,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
 <!-- ── Top bar ── -->
 <div class="topbar">
   <div class="topbar-row">
-    <span class="project-pill" id="project-name"><span class="pill-primary">${svgIcon(FolderGit, 13, 'flex-shrink:0')}<span class="pill-label">Loading…</span></span><span class="pill-action">${svgIcon(FolderOpen, 13, 'flex-shrink:0')}<span class="pill-label">Open recent folder</span></span></span>
+    <span class="project-pill" id="project-name"><span class="pill-primary">${svgIcon(FolderGit, 13, 'flex-shrink:0')}<span class="pill-label">Loading…</span></span><span class="pill-action"><span class="pill-action-inner"><span class="pill-copy">${svgIcon(FolderOpen, 13, 'flex-shrink:0')}<span class="pill-label">Open folder</span><span class="pill-sep">·</span></span><span class="pill-copy">${svgIcon(FolderOpen, 13, 'flex-shrink:0')}<span class="pill-label">Open folder</span><span class="pill-sep">·</span></span><span class="pill-copy">${svgIcon(FolderOpen, 13, 'flex-shrink:0')}<span class="pill-label">Open folder</span><span class="pill-sep">·</span></span></span></span></span>
     <span class="branch-pill" id="branch-pill"></span>
     <div style="flex:1"></div>
     <button class="new-note-pill" id="btn-new" title="New Note">
@@ -2636,7 +2644,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
 
 
 <!-- ── Setup banner ── -->
-<div class="setup-banner" id="setup-banner">
+<div class="setup-banner" id="setup-banner" style="display:none">
   <div class="setup-banner-title">Set up integrations</div>
   <div class="setup-banner-sub">Link your tools to get the most out of DevNotes.</div>
   <button class="setup-card" id="setup-github-row">
@@ -2706,6 +2714,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
   <button class="btn btn-ghost btn-sel-all" id="btn-sel-all" title="Select all visible notes">All</button>
   <button class="btn btn-ghost" id="btn-archive-sel" title="Archive selected" disabled>${svgIcon(Archive, 13)}</button>
   <button class="btn btn-ghost" id="btn-tag-sel" title="Assign tag to selected" disabled>${svgIcon(TagIcon, 13)}</button>
+  <button class="btn btn-ghost" id="btn-export-sel" title="Export selected" disabled>${svgIcon(SquareArrowOutUpRight, 13)}</button>
   <button class="btn btn-ghost btn-danger" id="btn-delete-sel" title="Delete selected" disabled>${svgIcon(Trash2, 13)}</button>
   <button class="btn btn-ghost" id="btn-cancel-sel">Cancel</button>
 </div>
@@ -2777,10 +2786,12 @@ export class SidebarView implements vscode.WebviewViewProvider {
   let githubConnected     = false;
   let showArchived           = false;
   let sortMode               = 'updated'; // 'updated' | 'starred' | 'alpha'
-let staleFilterActive      = false;
+  let staleFilterActive      = false;
   let selectMode         = false;
   let selectedIds        = [];
   let knownNoteIds       = null; // null on first load — skip highlight; Set afterwards
+  const expandedNoteIds  = new Set(); // persists across renderCards() calls
+  let lastSavedNoteId    = null;
   let openColorPop    = null;
   const pendingImageInsertions = new Map(); // noteId → { range, preview }
   let cardTagPickerCommit = null;
@@ -3000,6 +3011,7 @@ let staleFilterActive      = false;
     const hasSelection = n > 0;
     document.getElementById('btn-archive-sel').disabled = !hasSelection;
     document.getElementById('btn-tag-sel').disabled     = !hasSelection;
+    document.getElementById('btn-export-sel').disabled  = !hasSelection;
     document.getElementById('btn-delete-sel').disabled  = !hasSelection;
     const visibleCount = cardList.querySelectorAll('.card[tabindex="0"]').length;
     btnSelAll.classList.toggle('all-selected', n > 0 && n === visibleCount);
@@ -3040,6 +3052,12 @@ let staleFilterActive      = false;
   document.getElementById('btn-tag-sel').addEventListener('click', () => {
     if (selectedIds.length === 0) return;
     vscode.postMessage({ type: 'bulkTag', noteIds: [...selectedIds] });
+    exitSelectMode();
+  });
+
+  document.getElementById('btn-export-sel').addEventListener('click', () => {
+    if (selectedIds.length === 0) return;
+    vscode.postMessage({ type: 'exportNotes', noteIds: [...selectedIds] });
     exitSelectMode();
   });
 
@@ -3122,7 +3140,7 @@ let staleFilterActive      = false;
       currentUser       = msg.currentUser       ?? null;
       availableBranches = msg.availableBranches ?? [];
       githubConnected   = msg.githubConnected   ?? false;
-      if (msg.projectName) projectName.innerHTML = '<span class="pill-primary">' + ${jsSvg.folderGit} + '<span class="pill-label">' + esc(msg.projectName) + '</span></span><span class="pill-action">' + ${jsSvg.folderOpen} + '<span class="pill-label">Open recent folder</span></span>';
+      if (msg.projectName) projectName.innerHTML = '<span class="pill-primary">' + ${jsSvg.folderGit} + '<span class="pill-label">' + esc(msg.projectName) + '</span></span><span class="pill-action"><span class="pill-action-inner"><span class="pill-copy">' + ${jsSvg.folderOpen} + '<span class="pill-label">Open folder</span><span class="pill-sep">·</span></span><span class="pill-copy">' + ${jsSvg.folderOpen} + '<span class="pill-label">Open folder</span><span class="pill-sep">·</span></span><span class="pill-copy">' + ${jsSvg.folderOpen} + '<span class="pill-label">Open folder</span><span class="pill-sep">·</span></span></span></span>';
       // Show mine-filter button only when another user's note exists in this repo
       const hasOtherOwners = currentUser && notes.some(n => n.owner && n.owner !== currentUser);
       btnMineFilter.style.display = hasOtherOwners ? '' : 'none';
@@ -3145,6 +3163,14 @@ let staleFilterActive      = false;
             newCard.classList.add('highlight-new');
             setTimeout(() => newCard.classList.remove('highlight-new'), 1200);
           }
+        });
+      }
+      if (lastSavedNoteId) {
+        const savedId = lastSavedNoteId;
+        lastSavedNoteId = null;
+        requestAnimationFrame(() => {
+          const savedCard = cardList.querySelector('[data-id="' + savedId + '"]');
+          if (savedCard) savedCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         });
       }
       renderNewNoteTags();
@@ -3434,7 +3460,7 @@ let staleFilterActive      = false;
       if (title) {
         const branch   = draftBranchScope && currentBranch ? currentBranch : undefined;
         const codeLink = draftCodeLink || undefined;
-        vscode.postMessage({ type: 'createNote', title, color: 'yellow', tags: [...draftTags], templateId: draftTemplateId || undefined, branch, codeLink, body });
+        vscode.postMessage({ type: 'createNote', title, tags: [...draftTags], templateId: draftTemplateId || undefined, branch, codeLink, body });
       }
     }
 
@@ -3527,7 +3553,7 @@ let staleFilterActive      = false;
     const scopeCheckbox = document.getElementById('new-branch-scope');
     const branch = scopeCheckbox?.checked && currentBranch ? currentBranch : undefined;
     const body = window.SidebarEditor?.getMarkdown().trim() || undefined;
-    vscode.postMessage({ type: 'createNote', title, color: 'yellow', tags: [...newTags], templateId: newTemplateId, branch, body });
+    vscode.postMessage({ type: 'createNote', title, tags: [...newTags], templateId: newTemplateId, branch, body });
     closeNewForm();
   }
 
@@ -3553,7 +3579,7 @@ let staleFilterActive      = false;
 
   function renderBranchIndicator() {
     if (currentBranch) {
-      branchPillEl.innerHTML = '<span class="pill-primary">' + ${jsSvg.branch} + '<span class="pill-label">' + esc(currentBranch) + '</span></span><span class="pill-action">' + ${jsSvg.branchSwitch} + '<span class="pill-label">Switch branch</span></span>';
+      branchPillEl.innerHTML = '<span class="pill-primary">' + ${jsSvg.branch} + '<span class="pill-label">' + esc(currentBranch) + '</span></span><span class="pill-action"><span class="pill-action-inner"><span class="pill-copy">' + ${jsSvg.branchSwitch} + '<span class="pill-label">Switch branch</span><span class="pill-sep">·</span></span><span class="pill-copy">' + ${jsSvg.branchSwitch} + '<span class="pill-label">Switch branch</span><span class="pill-sep">·</span></span><span class="pill-copy">' + ${jsSvg.branchSwitch} + '<span class="pill-label">Switch branch</span><span class="pill-sep">·</span></span></span></span>';
       branchPillEl.classList.add('visible');
       branchFilterBtn.style.display = availableBranches.length > 1 ? '' : 'none';
       branchScopeLabel.classList.add('visible');
@@ -4241,11 +4267,52 @@ if (searchQuery) {
   function buildFormatBar(preview, footer) {
     const fmtBar = mkEl('div', 'card-fmtbar');
 
-    const mkFmtBtn = (label, title, fn) => {
+    const mkFmtBtn = (label, title, fn, queryCmd) => {
       const btn = mkEl('button', 'card-fmt-btn');
       btn.innerHTML = label; btn.title = title;
+      if (queryCmd) btn.dataset.fmtCmd = queryCmd;
       btn.addEventListener('mousedown', e => { e.preventDefault(); fn(); });
       return btn;
+    };
+
+    const syncActiveStates = () => {
+      if (preview.contentEditable !== 'true') return;
+      const anchorEl = () => {
+        const sel = window.getSelection();
+        if (!sel || !sel.anchorNode) return null;
+        return sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
+      };
+      fmtBar.querySelectorAll('[data-fmt-cmd]').forEach(btn => {
+        const cmd = btn.dataset.fmtCmd;
+        let active = false;
+        if (cmd === 'x-code') {
+          active = !!(anchorEl()?.closest('code'));
+        } else if (cmd === 'x-pre') {
+          active = !!(anchorEl()?.closest('pre'));
+        } else if (cmd === 'x-ul') {
+          const ul = anchorEl()?.closest('ul');
+          active = !!(ul && !ul.classList.contains('task-list'));
+        } else if (cmd === 'x-task') {
+          active = !!(anchorEl()?.closest('ul.task-list'));
+        } else if (cmd === 'x-strike') {
+          // Suppress false positive: CSS applies line-through on checked task items
+          // but that is not user-applied strikethrough formatting.
+          const el = anchorEl();
+          active = !el?.closest('.task-item') && !!el?.closest('s, del, strike');
+          if (!active && !el?.closest('.task-item')) {
+            try { active = document.queryCommandState('strikeThrough'); } catch {}
+          }
+        } else {
+          try { active = document.queryCommandState(cmd); } catch {}
+        }
+        btn.classList.toggle('active', active);
+      });
+      // Mirror active state onto each collapsed group's toggle button
+      fmtBar.querySelectorAll('.fmt-toggle-wrap').forEach(wrap => {
+        const toggle = wrap.querySelector('.fmt-grp-toggle');
+        const hasActive = !!wrap.querySelector('.fmt-dropdown .card-fmt-btn.active');
+        if (toggle) toggle.classList.toggle('active', hasActive);
+      });
     };
 
     const clearFn = () => {
@@ -4262,10 +4329,10 @@ if (searchQuery) {
     };
 
     const buildTextBtns = (c) => {
-      c.appendChild(mkFmtBtn(${jsSvg.fmtBold},       'Bold',          () => document.execCommand('bold')));
-      c.appendChild(mkFmtBtn(${jsSvg.fmtItalic},     'Italic',        () => document.execCommand('italic')));
-      c.appendChild(mkFmtBtn(${jsSvg.fmtUnderline},  'Underline',     () => document.execCommand('underline')));
-      c.appendChild(mkFmtBtn(${jsSvg.fmtStrike},     'Strikethrough', () => document.execCommand('strikeThrough')));
+      c.appendChild(mkFmtBtn(${jsSvg.fmtBold},       'Bold',          () => document.execCommand('bold'),         'bold'));
+      c.appendChild(mkFmtBtn(${jsSvg.fmtItalic},     'Italic',        () => document.execCommand('italic'),       'italic'));
+      c.appendChild(mkFmtBtn(${jsSvg.fmtUnderline},  'Underline',     () => document.execCommand('underline'),   'underline'));
+      c.appendChild(mkFmtBtn(${jsSvg.fmtStrike},     'Strikethrough', () => document.execCommand('strikeThrough'), 'x-strike'));
       c.appendChild(mkFmtBtn(${jsSvg.fmtCodeInline}, 'Inline code',   () => {
         const sel = window.getSelection();
         if (!sel || !sel.rangeCount) return;
@@ -4273,13 +4340,13 @@ if (searchQuery) {
         document.execCommand('insertHTML', false, text
           ? \`<code>\${text}</code>\`
           : '<code>​</code>');
-      }));
+      }, 'x-code'));
     };
 
     const buildListsBtns = (c) => {
-      c.appendChild(mkFmtBtn(${jsSvg.fmtList},      'Bullet list',    () => document.execCommand('insertUnorderedList')));
-      c.appendChild(mkFmtBtn(${jsSvg.fmtListNum},   'Numbered list',  () => document.execCommand('insertOrderedList')));
-      c.appendChild(mkFmtBtn(${jsSvg.fmtChecklist}, 'Checklist item', () => document.execCommand('insertHTML', false, '<ul class="task-list"><li class="task-item"><input type="checkbox" class="task-check"> <span>​</span></li></ul>')));
+      c.appendChild(mkFmtBtn(${jsSvg.fmtList},      'Bullet list',    () => document.execCommand('insertUnorderedList'), 'x-ul'));
+      c.appendChild(mkFmtBtn(${jsSvg.fmtListNum},   'Numbered list',  () => document.execCommand('insertOrderedList'),   'insertOrderedList'));
+      c.appendChild(mkFmtBtn(${jsSvg.fmtChecklist}, 'Checklist item', () => document.execCommand('insertHTML', false, '<ul class="task-list"><li class="task-item"><input type="checkbox" class="task-check"> <span>​</span></li></ul>'), 'x-task'));
     };
 
     const mkToggleWrap = (wrapCls, icon, title, buildFn) => {
@@ -4313,7 +4380,7 @@ if (searchQuery) {
     fmtBar.appendChild(mkEl('span', 'card-fmt-sep-bar fmt-sep-lists'));
 
     // Code / clear — always visible
-    fmtBar.appendChild(mkFmtBtn(${jsSvg.fmtCode},  'Code block',       () => document.execCommand('formatBlock', false, 'pre')));
+    fmtBar.appendChild(mkFmtBtn(${jsSvg.fmtCode},  'Code block',       () => document.execCommand('formatBlock', false, 'pre'), 'x-pre'));
     fmtBar.appendChild(mkEl('span', 'card-fmt-sep-bar'));
     fmtBar.appendChild(mkFmtBtn(${jsSvg.fmtClear}, 'Clear formatting', clearFn));
 
@@ -4349,6 +4416,13 @@ if (searchQuery) {
     preview.addEventListener('focus', () => {
       if (footer) footer.style.display = 'none';
       fmtBar.style.display = 'flex';
+      syncActiveStates();
+    });
+
+    preview.addEventListener('keyup',   syncActiveStates);
+    preview.addEventListener('mouseup', syncActiveStates);
+    document.addEventListener('selectionchange', () => {
+      if (preview.contentEditable === 'true') syncActiveStates();
     });
 
     return fmtBar;
@@ -4614,12 +4688,18 @@ if (searchQuery) {
 
     const showMore = mkEl('div', 'show-more');
     showMore.innerHTML = ${jsSvg.chevronDown};
-    const isLong   = note.content.split('\\n').length > 3 || note.content.length > 180;
-    if (isLong) showMore.style.display = 'flex';
+    const isLong   = note.content.split('\\n').length > 5 || note.content.length > 300;
+    if (isLong) showMore.style.visibility = 'visible';
 
-    let expanded = false;
+    let expanded = expandedNoteIds.has(note.id);
+    if (expanded) {
+      preview.classList.remove('clamped');
+      showMore.innerHTML = ${jsSvg.chevronUp};
+    }
     showMore.addEventListener('click', () => {
       expanded = !expanded;
+      if (expanded) expandedNoteIds.add(note.id);
+      else          expandedNoteIds.delete(note.id);
       preview.classList.toggle('clamped', !expanded);
       showMore.innerHTML = expanded ? ${jsSvg.chevronUp} : ${jsSvg.chevronDown};
     });
@@ -4648,18 +4728,34 @@ if (searchQuery) {
       if (e.target.type === 'checkbox') { e.preventDefault(); return; } // prevent browser re-toggle; handled by mousedown
       if (preview.contentEditable === 'true') return;
       const { clientX: x, clientY: y } = e;
+      expanded = true;
+      expandedNoteIds.add(note.id);
       preview.classList.remove('clamped');
-      showMore.style.display = 'none';
+      showMore.style.visibility = 'hidden';
       preview.contentEditable = 'true';
       requestAnimationFrame(() => {
-        preview.focus();
+        // Inject a nbsp placeholder into empty task spans so caretPositionFromPoint
+        // has a text node to anchor to, and the cursor is visible.
+        // htmlToMarkdown trims it away on blur, so nothing leaks to storage.
+        preview.querySelectorAll('.task-item span').forEach(span => {
+          if (span.textContent.replace(/ /g, '').trim() === '') {
+            span.textContent = ' ';
+          }
+        });
+        // Capture caret position BEFORE focus() — focus on a tall expanded card
+        // can trigger a browser scroll that shifts viewport coordinates, making
+        // caretPositionFromPoint(x, y) land on the wrong line.
+        // DOM node+offset positions are scroll-invariant, so capture first.
+        let savedNode = null, savedOffset = 0;
         if (document.caretPositionFromPoint) {
           const pos = document.caretPositionFromPoint(x, y);
-          if (pos) window.getSelection().collapse(pos.offsetNode, pos.offset);
+          if (pos) { savedNode = pos.offsetNode; savedOffset = pos.offset; }
         } else if (document.caretRangeFromPoint) {
           const range = document.caretRangeFromPoint(x, y);
-          if (range) { const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range); }
+          if (range) { savedNode = range.startContainer; savedOffset = range.startOffset; }
         }
+        preview.focus();
+        if (savedNode) window.getSelection().collapse(savedNode, savedOffset);
       });
     });
 
@@ -4668,15 +4764,23 @@ if (searchQuery) {
       fmtBar.style.display = 'none';
       footer.style.display = '';
       const newContent = htmlToMarkdown(preview.innerHTML);
-      if (newContent !== note.content) {
+      const contentChanged = newContent !== note.content;
+      if (contentChanged) {
         note.content = newContent;
+        lastSavedNoteId = note.id;
         vscode.postMessage({ type: 'updateNote', id: note.id, changes: { content: newContent } });
       }
       preview.innerHTML = simpleMarkdown(note.content);
       syncPlaceholder();
       if (!expanded) preview.classList.add('clamped');
       const stillLong = note.content.split('\\n').length > 5 || note.content.length > 300;
-      showMore.style.display = (stillLong && !expanded) ? 'flex' : 'none';
+      if (!contentChanged) {
+        // Content unchanged: renderCards() won't be called, so update showMore here.
+        // Space was already reserved via visibility:hidden, so no layout shift.
+        showMore.style.visibility = stillLong ? 'visible' : 'hidden';
+      }
+      // If content changed, renderCards() rebuilds the card — leave showMore hidden
+      // to avoid a shift in the brief gap before the rebuild arrives.
     });
 
     preview.addEventListener('keydown', e => {
@@ -4684,6 +4788,50 @@ if (searchQuery) {
       if (e.key === 'Tab') {
         e.preventDefault();
         document.execCommand(e.shiftKey ? 'outdent' : 'indent');
+      }
+      if (e.key === 'Enter') {
+        const sel = window.getSelection();
+        if (!sel || !sel.rangeCount) return;
+        const anchor = sel.anchorNode;
+        const taskItem = (anchor.nodeType === 3 ? anchor.parentElement : anchor)?.closest?.('.task-item');
+        if (!taskItem) return;
+        e.preventDefault();
+        const span = taskItem.querySelector('span');
+        const isEmpty = !span || span.textContent.replace(/​/g, '').replace(/ /g, '').trim() === '';
+        if (isEmpty) {
+          // Exit the list: remove the empty item and insert a paragraph after the list
+          const list = taskItem.closest('ul.task-list');
+          taskItem.remove();
+          if (list && list.children.length === 0) list.remove();
+          const p = document.createElement('p');
+          p.innerHTML = '<br>';
+          (list ?? taskItem).after(p);
+          const range = document.createRange();
+          range.setStart(p, 0);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        } else {
+          // Insert a new empty task item after the current one
+          const newLi = document.createElement('li');
+          newLi.className = 'task-item';
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.className = 'task-check';
+          const newSpan = document.createElement('span');
+          const placeholder = document.createTextNode(' ');
+          newSpan.appendChild(placeholder);
+          newLi.append(cb, document.createTextNode(' '), newSpan);
+          taskItem.after(newLi);
+          requestAnimationFrame(() => {
+            const r = document.createRange();
+            r.setStart(placeholder, 0);
+            r.collapse(true);
+            const s = window.getSelection();
+            s.removeAllRanges();
+            s.addRange(r);
+          });
+        }
       }
     });
 
@@ -4752,6 +4900,7 @@ if (searchQuery) {
     // ── Format bar (swaps with footer while editing) ──
     const fmtBar = buildFormatBar(preview, footer);
     card.appendChild(fmtBar);
+    preview.addEventListener('focus', () => { showMore.style.visibility = 'hidden'; });
 
     // ── Keyboard shortcuts ──
     card.tabIndex = 0;
@@ -5177,15 +5326,16 @@ if (searchQuery) {
       const tag = node.tagName.toLowerCase();
       const inner = Array.from(node.childNodes).map(walk).join('');
       switch (tag) {
-        case 'strong': case 'b':               return \`**\${inner}**\`;
-        case 'em':     case 'i':               return \`*\${inner}*\`;
-        case 'code':                           return \`\\\`\${inner}\\\`\`;
-        case 'del':    case 's': case 'strike': return \`~~\${inner}~~\`;
-        case 'u':                              return \`++\${inner}++\`;
+        case 'strong': case 'b':               { const t = inner.replace(/^\\n+|\\n+$/g, ''); return t ? \`**\${t}**\` : ''; }
+        case 'em':     case 'i':               { const t = inner.replace(/^\\n+|\\n+$/g, ''); return t ? \`*\${t}*\` : ''; }
+        case 'code':                           { const t = inner.replace(/^\\n+|\\n+$/g, ''); return t ? \`\\\`\${t}\\\`\` : ''; }
+        case 'del':    case 's': case 'strike': { const t = inner.replace(/^\\n+|\\n+$/g, ''); return t ? \`~~\${t}~~\` : ''; }
+        case 'u':                              { const t = inner.replace(/^\\n+|\\n+$/g, ''); return t ? \`++\${t}++\` : ''; }
         case 'h1':                             return \`# \${inner}\\n\`;
         case 'h2':                             return \`## \${inner}\\n\`;
         case 'h3':                             return \`### \${inner}\\n\`;
         case 'pre':                            return \`\\\`\\\`\\\`\\n\${node.textContent.trim()}\\n\\\`\\\`\\\`\\n\`;
+        case 'blockquote':                     return inner.trim().split('\\n').map(l => \`> \${l}\`).join('\\n') + '\\n';
         case 'br':                             return '\\n';
         case 'li': {
           const cb = node.querySelector('input[type="checkbox"]');
@@ -5195,10 +5345,14 @@ if (searchQuery) {
               .map(walk).join('').trim();
             return \`- [\${cb.checked ? 'x' : ' '}] \${txt}\\n\`;
           }
-          return \`- \${inner}\\n\`;
+          if (node.parentElement?.tagName.toLowerCase() === 'ol') {
+            const idx = Array.from(node.parentElement.children).indexOf(node) + 1;
+            return \`\${idx}. \${inner.trim()}\\n\`;
+          }
+          return \`- \${inner.trim()}\\n\`;
         }
         case 'ul':     case 'ol':              return inner;
-        case 'p':      case 'div':             return inner ? inner + '\\n' : '\\n';
+        case 'p':      case 'div':             { const t = inner.replace(/\\n+$/, ''); return t.trim() ? t + '\\n\\n' : '\\n\\n'; }
         case 'img': {
           const sp  = node.getAttribute('data-storage-path') || node.getAttribute('src') || '';
           const alt = node.getAttribute('alt') || 'image';
@@ -5207,7 +5361,7 @@ if (searchQuery) {
         default:                               return inner;
       }
     }
-    return Array.from(tmp.childNodes).map(walk).join('').replace(/\\n$/, '');
+    return Array.from(tmp.childNodes).map(walk).join('').replace(/\\n+$/, '');
   }
 
     function simpleMarkdown(md) {
@@ -5246,9 +5400,11 @@ if (searchQuery) {
       }
       if (/^[-*]\\s/.test(lines[i])) {
         const items = [];
+        let hasTask = false;
         while (i < lines.length && /^[-*]\\s/.test(lines[i])) {
           const tm = lines[i].match(/^[-*]\\s\\[([ x])\\]\\s(.*)/);
           if (tm) {
+            hasTask = true;
             const chk = tm[1] === 'x';
             items.push(\`<li class="task-item\${chk ? ' done' : ''}"><input type="checkbox" class="task-check"\${chk ? ' checked' : ''}> <span>\${inline(tm[2])}</span></li>\`);
           } else {
@@ -5256,10 +5412,32 @@ if (searchQuery) {
           }
           i++;
         }
-        out.push(\`<ul class="task-list">\${items.join('')}</ul>\`);
+        out.push(hasTask
+          ? \`<ul class="task-list">\${items.join('')}</ul>\`
+          : \`<ul>\${items.join('')}</ul>\`);
+      } else if (/^\\d+\\.\\s/.test(lines[i])) {
+        const items = [];
+        while (i < lines.length && /^\\d+\\.\\s/.test(lines[i])) {
+          items.push(\`<li>\${inline(lines[i].replace(/^\\d+\\.\\s/, ''))}</li>\`);
+          i++;
+        }
+        out.push(\`<ol>\${items.join('')}</ol>\`);
+      } else if (/^> /.test(lines[i])) {
+        const bqLines = [];
+        while (i < lines.length && /^> /.test(lines[i])) {
+          bqLines.push(inline(lines[i].slice(2)));
+          i++;
+        }
+        out.push(\`<blockquote>\${bqLines.join('<br>')}</blockquote>\`);
       } else {
-        const l = inline(lines[i]);
-        out.push(\`<p>\${l || '&nbsp;'}</p>\`);
+        if (!lines[i].trim()) {
+          let blanks = 0;
+          while (i < lines.length && !lines[i].trim()) { blanks++; i++; }
+          const brs = Math.floor(blanks / 2);
+          for (let b = 0; b < brs; b++) out.push('<p><br></p>');
+          continue;
+        }
+        out.push(\`<p>\${inline(lines[i])}</p>\`);
         i++;
       }
     }
@@ -5433,10 +5611,4 @@ if (searchQuery) {
   }
 }
 
-// ─── Utilities ───────────────────────────────────────────────────────────────
-
-function getNonce(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  return Array.from({ length: 32 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-}
 

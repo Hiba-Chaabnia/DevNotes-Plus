@@ -86,14 +86,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
     {
       name       : 'create_note',
-      description: 'Create a new DevNote in the current workspace. Use when asked to capture, document, or save any information. Tags can be: bug, todo, idea, meeting, reference (or any custom tag id). Colors: yellow, orange, purple, cyan, green, pink, blue, white.',
+      description: 'Create a new DevNote in the current workspace. Use when asked to capture, document, or save any information. Tags can be: bug, todo, idea, meeting, reference (or any custom tag id).',
       inputSchema: {
         type      : 'object',
         properties: {
           title          : { type: 'string',  description: 'Note title (required)' },
           content        : { type: 'string',  description: 'Note body in Markdown' },
           tags           : { type: 'array', items: { type: 'string' }, description: 'Tag IDs to apply (e.g. ["bug", "todo"])' },
-          color          : { type: 'string',  description: 'Note card color', enum: ['yellow','orange','purple','cyan','green','pink','blue','white'] },
           codeLink_file  : { type: 'string',  description: 'Workspace-relative file path to link this note to (e.g. "src/auth.ts")' },
           codeLink_line  : { type: 'number',  description: '1-based line number for the code link' },
           branch         : { type: 'string',  description: 'Scope this note to a specific git branch. Omit for all-branch visibility.' },
@@ -142,14 +141,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name       : 'update_note',
-      description: 'Update a note\'s metadata: title, tags, color, starred status, or shared status. Does not affect the note body — use append_to_note for content changes.',
+      description: 'Update a note\'s metadata: title, tags, starred status, or shared status. Does not affect the note body — use append_to_note for content changes.',
       inputSchema: {
         type      : 'object',
         properties: {
           query  : { type: 'string',  description: 'Note ID or title' },
           title  : { type: 'string',  description: 'New title' },
           tags   : { type: 'array', items: { type: 'string' }, description: 'Replace tag list' },
-          color  : { type: 'string',  description: 'New color', enum: ['yellow','orange','purple','cyan','green','pink','blue','white'] },
           starred  : { type: 'boolean', description: 'Set starred status' },
           archived : { type: 'boolean', description: 'Set archived status. Archived notes are hidden from the main list but not deleted.' },
           shared   : { type: 'boolean', description: 'Set shared status (makes note visible to teammates via git)' },
@@ -321,7 +319,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const lines: string[] = [
           `# ${note.title}`,
           `**ID:** ${note.id}`,
-          `**Color:** ${note.color}`,
           tagLabels ? `**Tags:** ${tagLabels}` : '',
           note.starred ? '**Starred:** yes' : '',
           note.branch  ? `**Branch:** ${note.branch}` : '',
@@ -412,8 +409,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       // ── update_note ─────────────────────────────────────────────────────────
       case 'update_note': {
-        const { query, title, tags, color, starred, archived, shared, owner, remindAt: remindAtStr } = args as {
-          query: string; title?: string; tags?: string[]; color?: string;
+        const { query, title, tags, starred, archived, shared, owner, remindAt: remindAtStr } = args as {
+          query: string; title?: string; tags?: string[];
           starred?: boolean; archived?: boolean; shared?: boolean; owner?: string; remindAt?: string;
         };
 
@@ -425,7 +422,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         if (title      !== undefined) note.title    = title;
         if (tags       !== undefined) note.tags      = tags;
-        if (color      !== undefined) note.color     = color;
         if (starred    !== undefined) note.starred   = starred;
         if (archived   !== undefined) note.archived  = archived || undefined;
         if (shared     !== undefined) note.shared    = shared;

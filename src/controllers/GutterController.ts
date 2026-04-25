@@ -44,28 +44,24 @@ export class GutterController implements vscode.Disposable {
     this.refresh();
   }
 
-  /** Re-compute gutter decorations for the currently active editor. */
+  /** Re-compute gutter decorations for all visible editors. */
   refresh(): void {
-    const editor = vscode.window.activeTextEditor;
-    if (!editor) return;
+    const notes = this.storage.getNotes();
+    for (const editor of vscode.window.visibleTextEditors) {
+      const relPath = vscode.workspace.asRelativePath(editor.document.uri, false);
+      if (relPath === editor.document.uri.fsPath) {
+        editor.setDecorations(this.decorationType, []);
+        continue;
+      }
 
-    const currentRelPath = vscode.workspace.asRelativePath(editor.document.uri, false);
-    if (currentRelPath === editor.document.uri.fsPath) {
-      editor.setDecorations(this.decorationType, []);
-      return;
+      const linked = notes.filter(n => n.codeLink?.file === relPath);
+      const ranges: vscode.Range[] = linked.map(note => {
+        const lineIndex = Math.min(note.codeLink!.line - 1, editor.document.lineCount - 1);
+        const pos = new vscode.Position(lineIndex, 0);
+        return new vscode.Range(pos, pos);
+      });
+      editor.setDecorations(this.decorationType, ranges);
     }
-
-    const linked = this.storage.getNotes().filter(
-      n => n.codeLink?.file === currentRelPath
-    );
-
-    const ranges: vscode.Range[] = linked.map(note => {
-      const lineIndex = Math.min(note.codeLink!.line - 1, editor.document.lineCount - 1);
-      const pos = new vscode.Position(lineIndex, 0);
-      return new vscode.Range(pos, pos);
-    });
-
-    editor.setDecorations(this.decorationType, ranges);
   }
 
   /** Hover provider — shows note titles when hovering a linked line's text. */

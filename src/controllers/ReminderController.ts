@@ -46,7 +46,7 @@ export class ReminderController implements vscode.Disposable {
 
   private async fire(noteId: string, title: string): Promise<void> {
     const action = await vscode.window.showInformationMessage(
-      `🔔 DevNote: "${title}"`,
+      `DevNote: "${title}"`,
       'Open', 'Snooze 1h', 'Snooze tomorrow', 'Dismiss'
     );
 

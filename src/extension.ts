@@ -10,7 +10,6 @@ import { ActivityFeedView } from './views/ActivityFeedView';
 import { ConflictPanel } from './views/ConflictPanel';
 import { runExport } from './controllers/ExportController';
 import { detectProjectIdentity, getCurrentBranch, getGitUser, getLocalBranches } from './services/GitDetector';
-import { spawnSync } from 'child_process';
 import { registerDevNotesMcp, isClaudeCodeInstalled, isMcpRegistered } from './services/McpRegistration';
 import { StatusBarController } from './controllers/StatusBarController';
 
@@ -89,6 +88,7 @@ async function _activate(context: vscode.ExtensionContext): Promise<void> {
     storage,
     (noteId) => EditorPanel.show(context, storage, noteId, () => sidebar.push()),
     () => gutterController.refresh(),
+    (noteId) => { if (EditorPanel.current?.noteId === noteId) EditorPanel.current.push(); },
   );
 
   // Seed MCP registration state so the banner reflects reality on first load
@@ -272,7 +272,6 @@ async function _activate(context: vscode.ExtensionContext): Promise<void> {
         title,
         codeLink,
         content: tpl?.content,
-        color  : tpl?.color,
         tags   : tpl?.tags,
         branch,
         owner  : currentUser,
@@ -315,10 +314,12 @@ async function _activate(context: vscode.ExtensionContext): Promise<void> {
     })
   );
 
+  const devnotesDir = storage.folderUri.fsPath;
+
   // Export all notes
   context.subscriptions.push(
     vscode.commands.registerCommand('devnotes.exportAll', () =>
-      runExport(storage.getNotes(), storage.getTags())
+      runExport(storage.getNotes(), devnotesDir)
     )
   );
 
@@ -327,7 +328,7 @@ async function _activate(context: vscode.ExtensionContext): Promise<void> {
     vscode.commands.registerCommand('devnotes.exportNote', (noteId: string) => {
       const note = storage.getNote(noteId);
       if (!note) return;
-      return runExport([note], storage.getTags());
+      return runExport([note], devnotesDir);
     })
   );
 
@@ -335,7 +336,7 @@ async function _activate(context: vscode.ExtensionContext): Promise<void> {
   context.subscriptions.push(
     vscode.commands.registerCommand('devnotes.exportSelected', (noteIds: string[]) => {
       const notes = noteIds.map(id => storage.getNote(id)).filter((n): n is import('./services/NoteStorage').Note => !!n);
-      return runExport(notes, storage.getTags());
+      return runExport(notes, devnotesDir);
     })
   );
 
