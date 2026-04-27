@@ -75,6 +75,7 @@ type ToExt =
   | { type: 'openFolder' }
   | { type: 'pasteImage'; noteId: string; base64: string; ext: string }
   | { type: 'bannerDismiss' }
+  | { type: 'setTheme'; vars: Record<string, string> | null }
 
 async function readGitHubToken(wsRoot: vscode.Uri): Promise<string | undefined> {
   try {
@@ -172,6 +173,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
     private readonly onOpenEditor: (noteId: string) => void,
     private readonly onNoteLinkChanged: () => void = () => {},
     private readonly onNoteUpdated: (noteId: string) => void = () => {},
+    private readonly onSetTheme: (vars: Record<string, string> | null) => void = () => {},
   ) {}
 
   setProjectName(name: string): void {
@@ -850,6 +852,10 @@ export class SidebarView implements vscode.WebviewViewProvider {
         break;
       }
 
+      case 'setTheme':
+        this.onSetTheme(msg.vars);
+        break;
+
     }
   }
 
@@ -1137,9 +1143,12 @@ export class SidebarView implements vscode.WebviewViewProvider {
     box-shadow: 0 4px 20px rgba(0,0,0,.28);
     padding: 4px;
     min-width: 176px;
+    overflow-y: auto;
     display: none;
     flex-direction: column;
+    scrollbar-width: none;
   }
+  .overflow-menu::-webkit-scrollbar { display: none; }
   .overflow-menu.open { display: flex; }
 
   .ovf-item {
@@ -5073,18 +5082,31 @@ if (searchQuery) {
 
     // ── Smart position (measure after populate) ──
     cardOvfMenu.classList.add('open');
-    const rect   = btn.getBoundingClientRect();
-    const menuH  = cardOvfMenu.offsetHeight;
-    const menuW  = cardOvfMenu.offsetWidth;
-    const vh     = window.innerHeight;
-    const vw     = window.innerWidth;
-    const GAP    = 4;
+    cardOvfMenu.style.maxHeight = 'none'; // unconstrain so offsetHeight = natural height
+    const rect        = btn.getBoundingClientRect();
+    const naturalH    = cardOvfMenu.offsetHeight;
+    const menuW       = cardOvfMenu.offsetWidth;
+    const vh          = document.documentElement.clientHeight;
+    const vw          = document.documentElement.clientWidth;
+    const GAP         = 4;
+    const spaceBelow  = vh - rect.bottom - GAP;
+    const spaceAbove  = rect.top - GAP;
 
-    // Vertical: prefer below, flip above if not enough room
-    if (rect.bottom + GAP + menuH <= vh) {
+    // Vertical: prefer below; flip above if more room; always clamp to available space
+    if (naturalH <= spaceBelow) {
+      cardOvfMenu.style.maxHeight = '';
+      cardOvfMenu.style.top    = (rect.bottom + GAP) + 'px';
+      cardOvfMenu.style.bottom = 'auto';
+    } else if (naturalH <= spaceAbove) {
+      cardOvfMenu.style.maxHeight = '';
+      cardOvfMenu.style.top    = 'auto';
+      cardOvfMenu.style.bottom = (vh - rect.top + GAP) + 'px';
+    } else if (spaceBelow >= spaceAbove) {
+      cardOvfMenu.style.maxHeight = spaceBelow + 'px';
       cardOvfMenu.style.top    = (rect.bottom + GAP) + 'px';
       cardOvfMenu.style.bottom = 'auto';
     } else {
+      cardOvfMenu.style.maxHeight = spaceAbove + 'px';
       cardOvfMenu.style.top    = 'auto';
       cardOvfMenu.style.bottom = (vh - rect.top + GAP) + 'px';
     }
@@ -5449,6 +5471,7 @@ if (searchQuery) {
   const T = (s,f,df,pb,lh,ew,eb,bb,bf,btn,btf,fb,ib,ifo,lnk,err,sel,bsh,bshf) => ({
     '--vscode-sideBar-background':             s,
     '--vscode-foreground':                     f,
+    '--vscode-editor-foreground':              f,
     '--vscode-descriptionForeground':          df,
     '--vscode-panel-border':                   pb,
     '--vscode-list-hoverBackground':           lh,
@@ -5546,6 +5569,8 @@ if (searchQuery) {
     themeDropdown.querySelectorAll('.theme-option').forEach(o =>
       o.classList.toggle('active', o.dataset.theme === theme.name)
     );
+    // Propagate to editor and conflict panels — null means "reset to VS Code native"
+    vscode.postMessage({ type: 'setTheme', vars: theme.vars ?? null });
   }
 
   themePrevBtn.addEventListener('click', (e) => {

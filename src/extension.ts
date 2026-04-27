@@ -83,12 +83,23 @@ async function _activate(context: vscode.ExtensionContext): Promise<void> {
   // which is always after activation completes.
   let gutterController!: GutterController;
 
+  let activeThemeVars: Record<string, string> | null = null;
+
   const sidebar = new SidebarView(
     context,
     storage,
-    (noteId) => EditorPanel.show(context, storage, noteId, () => sidebar.push()),
+    (noteId) => {
+      EditorPanel.show(context, storage, noteId, () => sidebar.push());
+      if (activeThemeVars) EditorPanel.current?.setTheme(activeThemeVars);
+    },
     () => gutterController.refresh(),
     (noteId) => { if (EditorPanel.current?.noteId === noteId) EditorPanel.current.push(); },
+    (vars) => {
+      activeThemeVars = vars;
+      EditorPanel.current?.setTheme(vars);
+      ConflictPanel.current?.setTheme(vars);
+      activityFeed.setTheme(vars);
+    },
   );
 
   // Seed MCP registration state so the banner reflects reality on first load
@@ -152,7 +163,7 @@ async function _activate(context: vscode.ExtensionContext): Promise<void> {
     for (const note of conflicted) {
       if (notifiedConflicts.has(note.id)) continue;
       notifiedConflicts.add(note.id);
-      notifyConflict(note.id, note.title, context, storage, sidebar);
+      notifyConflict(note.id, note.title, context, storage, sidebar, activeThemeVars);
     }
   };
 
@@ -310,7 +321,7 @@ async function _activate(context: vscode.ExtensionContext): Promise<void> {
   // Open the conflict resolution panel for a specific note
   context.subscriptions.push(
     vscode.commands.registerCommand('devnotes.openConflict', (noteId: string) => {
-      ConflictPanel.show(context, storage, noteId, () => sidebar.push());
+      ConflictPanel.show(context, storage, noteId, () => sidebar.push(), activeThemeVars);
     })
   );
 
@@ -423,11 +434,12 @@ function refreshProjectIdentity(sidebar: SidebarView): void {
 }
 
 async function notifyConflict(
-  noteId : string,
-  title  : string,
-  context: vscode.ExtensionContext,
-  storage: NoteStorage,
-  sidebar: SidebarView,
+  noteId    : string,
+  title     : string,
+  context   : vscode.ExtensionContext,
+  storage   : NoteStorage,
+  sidebar   : SidebarView,
+  themeVars : Record<string, string> | null = null,
 ): Promise<void> {
   const action = await vscode.window.showWarningMessage(
     `⚠ Conflict in shared note: "${title}"`,
@@ -435,7 +447,7 @@ async function notifyConflict(
     'Dismiss',
   );
   if (action === 'Resolve') {
-    ConflictPanel.show(context, storage, noteId, () => sidebar.push());
+    ConflictPanel.show(context, storage, noteId, () => sidebar.push(), themeVars);
   }
 }
 

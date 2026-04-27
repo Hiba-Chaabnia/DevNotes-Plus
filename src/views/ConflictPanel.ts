@@ -24,6 +24,7 @@ export class ConflictPanel {
     storage    : NoteStorage,
     noteId     : string,
     onResolved : () => void,
+    themeVars  : Record<string, string> | null = null,
   ): Promise<void> {
     const versions = await storage.getConflictVersions(noteId);
     if (!versions) {
@@ -36,6 +37,13 @@ export class ConflictPanel {
     }
 
     new ConflictPanel(context, storage, noteId, versions.ours, versions.theirs, versions.incomingRef, versions.oursRef, onResolved);
+    if (themeVars) ConflictPanel.current?.setTheme(themeVars);
+  }
+
+  // ── Theme propagation from sidebar preview ───────────────────────────────
+
+  setTheme(vars: Record<string, string> | null): void {
+    this.panel.webview.postMessage({ type: 'setTheme', vars });
   }
 
   // ── Constructor ─────────────────────────────────────────────────────────
@@ -1268,6 +1276,17 @@ export class ConflictPanel {
 // ── Resolution buttons ────────────────────────────────────────────────────
   document.getElementById('keep-ours').addEventListener('click',   () => vscode.postMessage({ type: 'resolve', side: 'ours' }));
   document.getElementById('keep-theirs').addEventListener('click', () => vscode.postMessage({ type: 'resolve', side: 'theirs' }));
+
+  // ── Theme propagation from sidebar preview ────────────────────────────────
+  window.addEventListener('message', ({ data }) => {
+    if (data?.type !== 'setTheme') return;
+    const root = document.documentElement;
+    if (data.vars) {
+      Object.entries(data.vars).forEach(([k, v]) => root.style.setProperty(k, v));
+    } else {
+      root.removeAttribute('style');
+    }
+  });
 
   // ── HTML → Markdown (reverses simpleMarkdown output for contenteditable save) ──
   function htmlToMd(html) {

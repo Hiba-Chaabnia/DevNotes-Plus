@@ -47,6 +47,13 @@ export class EditorPanel {
     new EditorPanel(context, storage, noteId, onUpdate);
   }
 
+  // ── Theme propagation from sidebar preview ───────────────────────────────
+
+  setTheme(vars: Record<string, string> | null): void {
+    if (this.disposed) return;
+    this.panel.webview.postMessage({ type: 'setTheme', vars });
+  }
+
   // ── Push updated content (e.g. after external file change) ─────────────
 
   push(): void {

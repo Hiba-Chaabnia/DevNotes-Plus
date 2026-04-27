@@ -44,7 +44,7 @@
           "id": "devnotesActivityView",
           "name": "Activity",
           "visibility": "collapsed",
-          "when": "workspaceFolderCount != 0"
+          "when": "workspaceFolderCount != 0 && devnotes.hasActivity"
         }
       ]
     },
