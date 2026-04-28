@@ -38,6 +38,7 @@ type ToExt =
   | { type: 'linkToEditor'; noteId: string }
   | { type: 'removeCodeLink'; noteId: string }
   | { type: 'openGitHubLink'; url: string }
+  | { type: 'openLink'; url: string }
   | { type: 'connectGitHub' }
   | { type: 'disconnectGitHub' }
   | { type: 'archiveNote'; id: string }
@@ -559,6 +560,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
       }
 
       case 'openGitHubLink':
+      case 'openLink':
         vscode.env.openExternal(vscode.Uri.parse(msg.url));
         break;
 
@@ -1507,6 +1509,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
   .card-preview hr { border: none; border-top: 1px solid rgba(${hexToRgb(C.neutral)},.25); margin: 4px 0; }
   .card-preview ul, .card-preview ol { padding-left: 1.2em; margin: 0 0 4px; }
   .card-preview li { margin: 1px 0; }
+  .card-preview a { color: var(--vscode-button-background); text-decoration: underline; cursor: pointer; }
   .card-preview code {
     font-family: var(--vscode-editor-font-family, monospace);
     font-size: .85em;
@@ -2625,6 +2628,15 @@ export class SidebarView implements vscode.WebviewViewProvider {
   projectName.addEventListener('click', () => vscode.postMessage({ type: 'openFolder' }));
   const cardList       = document.getElementById('card-list');
   cardList.addEventListener('scroll', () => { if (cardOvfMenu?.classList.contains('open')) closeAllPops(); }, { passive: true });
+  cardList.addEventListener('click', e => {
+    const anchor = e.target.closest('a');
+    if (!anchor) return;
+    const href = anchor.getAttribute('href');
+    if (!href) return;
+    e.preventDefault();
+    e.stopPropagation();
+    vscode.postMessage({ type: 'openLink', url: href });
+  });
   const tagBar         = document.getElementById('tag-bar');
   const searchEl       = document.getElementById('search');
   const searchClearEl  = document.getElementById('search-clear');
@@ -5087,6 +5099,10 @@ if (searchQuery) {
         case 'code':                           { const t = inner.replace(/^\\n+|\\n+$/g, ''); return t ? \`\\\`\${t}\\\`\` : ''; }
         case 'del':    case 's': case 'strike': { const t = inner.replace(/^\\n+|\\n+$/g, ''); return t ? \`~~\${t}~~\` : ''; }
         case 'u':                              { const t = inner.replace(/^\\n+|\\n+$/g, ''); return t ? \`++\${t}++\` : ''; }
+        case 'a': {
+          const href = node.getAttribute('href') || '';
+          return href ? \`[\${inner}](\${href})\` : inner;
+        }
         case 'h1':                             return \`# \${inner}\\n\\n\`;
         case 'h2':                             return \`## \${inner}\\n\\n\`;
         case 'h3':                             return \`### \${inner}\\n\\n\`;
