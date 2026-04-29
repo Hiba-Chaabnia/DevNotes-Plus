@@ -397,8 +397,14 @@ async function _activate(context: vscode.ExtensionContext): Promise<void> {
         const newRel = vscode.workspace.asRelativePath(newUri, false);
         const affected = storage.getNotes().filter(n => n.codeLink?.file === oldRel);
         for (const note of affected) {
-          await storage.updateNote(note.id, { codeLink: { file: newRel, line: note.codeLink!.line } });
+          await storage.updateNote(note.id, { codeLink: { ...note.codeLink!, file: newRel } });
           anyChanged = true;
+        }
+        if (affected.length > 0) {
+          try {
+            const doc = await vscode.workspace.openTextDocument(newUri);
+            recoverCodeLinkDrift(doc, storage, sidebar, gutterController);
+          } catch { /* renamed file may not be readable yet */ }
         }
       }
       if (anyChanged) {
@@ -456,6 +462,10 @@ async function _activate(context: vscode.ExtensionContext): Promise<void> {
             for (const note of notes) {
               await storage.updateNote(note.id, { codeLink: { ...note.codeLink!, file: newRelPath } });
             }
+            try {
+              const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(fsPath));
+              recoverCodeLinkDrift(doc, storage, sidebar, gutterController);
+            } catch { /* file may not be readable */ }
             sidebar.push();
             gutterController.refresh();
             statusBar.refresh();
@@ -526,6 +536,23 @@ function recoverCodeLinkDrift(
   const relPath = vscode.workspace.asRelativePath(document.uri, false);
   if (relPath === document.uri.fsPath) return;
 
+  // Re-anchor notes that lost lineContent (e.g. stripped by an older rename handler).
+  // Without lineContent the drift search has no anchor; reading the current line
+  // at the stored position re-establishes it so future saves can recover drift.
+  for (const note of storage.getNotes().filter(n => n.codeLink?.file === relPath)) {
+    const cl = note.codeLink!;
+    if (!cl.lineContent || cl.lineContent.trim().length < 10) {
+      const lineIdx = cl.line - 1;
+      if (lineIdx >= 0 && lineIdx < document.lineCount) {
+        const content = document.lineAt(lineIdx).text;
+        if (content.trim().length >= 10) {
+          storage.updateNote(note.id, { codeLink: { ...cl, lineContent: content } });
+        }
+      }
+    }
+  }
+
+  // Re-read after re-anchoring so newly restored notes participate in drift recovery.
   const eligible = storage.getNotes().filter(n => {
     const cl = n.codeLink;
     return cl?.file === relPath && cl.lineContent && cl.lineContent.trim().length >= 10;
