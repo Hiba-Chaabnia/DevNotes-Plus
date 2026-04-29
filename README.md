@@ -241,4 +241,4 @@ npm run build:webview
 
 ## License
 
-MIT
+AGPL-3.0 — see [LICENSE](LICENSE) for details.

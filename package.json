@@ -3,7 +3,13 @@
   "displayName": "DevNotes",
   "description": "Project-scoped sticky-note canvas for developers",
   "version": "0.1.0",
-  "publisher": "devnotes",
+  "icon": "media/icon.png",
+  "publisher": "HibaChaabnia",
+  "license": "AGPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HibaChaabnia/devnotes"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -89,11 +95,6 @@
       {
         "command": "devnotes.focusSidebar",
         "title": "Open DevNotes Sidebar",
-        "category": "DevNotes"
-      },
-      {
-        "command": "devnotes.previewChips",
-        "title": "Preview Chip Styles",
         "category": "DevNotes"
       }
     ],
