@@ -309,6 +309,8 @@ export class NoteStorage {
     await this.writeNote(this.notes[idx]);
     if ('shared' in changes) {
       await this.updateGitignore(id, changes.shared ?? false);
+    } else if (this.notes[idx].shared && 'content' in changes) {
+      await this.updateGitignore(id, true);
     }
   }
 
@@ -774,6 +776,14 @@ export class NoteStorage {
     return this.gitignoreWriteQueue;
   }
 
+  private noteImageFilenames(content: string): string[] {
+    const filenames: string[] = [];
+    const regex = /!\[[^\]]*\]\(\.devnotes\/assets\/([^)]+)\)/g;
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(content)) !== null) filenames.push(m[1]);
+    return filenames;
+  }
+
   private async doUpdateGitignore(id: string, shared: boolean): Promise<void> {
     const gitignorePath = vscode.Uri.joinPath(this.folder, '.gitignore');
     let content: string;
@@ -789,7 +799,7 @@ export class NoteStorage {
 
     // Normalise line endings (CRLF → LF) and strip blank lines to keep the
     // file tidy after repeated edits.
-    const lines = content
+    let lines = content
       .split(/\r?\n/)
       .filter(l => l.trim() !== '' || l === '*') // preserve the wildcard line
       .filter(l => l.trim() !== noteEntry);       // remove stale note entry
@@ -804,6 +814,32 @@ export class NoteStorage {
         lines.push(tagsEntry);
       }
       lines.push(noteEntry);
+
+      // Un-ignore every image asset referenced by this note.
+      const note = this.notes.find(n => n.id === id);
+      if (note) {
+        for (const img of this.noteImageFilenames(note.content)) {
+          const assetEntry = `!assets/${img}`;
+          if (!lines.some(l => l.trim() === assetEntry)) lines.push(assetEntry);
+        }
+      }
+    } else {
+      // Remove asset entries that are no longer referenced by any shared note.
+      // The note being un-shared (or deleted) is already absent from this.notes
+      // at delete time, and present-but-shared=false at un-share time — either
+      // way it won't contribute images to the retained set below.
+      const retainedAssets = new Set<string>();
+      for (const note of this.notes) {
+        if (note.id !== id && note.shared) {
+          for (const img of this.noteImageFilenames(note.content)) {
+            retainedAssets.add(img);
+          }
+        }
+      }
+      lines = lines.filter(l => {
+        const m = l.trim().match(/^!assets\/(.+)$/);
+        return !m || retainedAssets.has(m[1]);
+      });
     }
 
     await vscode.workspace.fs.writeFile(gitignorePath, enc.encode(lines.join('\n') + '\n'));
