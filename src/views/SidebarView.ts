@@ -5119,17 +5119,23 @@ if (searchQuery) {
         case 'br':                             return '\\n';
         case 'li': {
           const cb = node.querySelector('input[type="checkbox"]');
+          const childArr = Array.from(node.childNodes);
+          const isListEl = n => n.nodeType === 1 && (n.tagName === 'UL' || n.tagName === 'OL');
+          const inlineNodes = childArr.filter(n => !isListEl(n));
+          const listNodes   = childArr.filter(isListEl);
+          const nestedMd = listNodes.map(nl => walk(nl).replace(/^(?=.)/gm, '  ')).join('');
           if (cb) {
-            const txt = Array.from(node.childNodes)
+            const txt = inlineNodes
               .filter(n => !(n.nodeType === 1 && n.tagName.toLowerCase() === 'input'))
               .map(walk).join('').trim();
-            return \`- [\${cb.checked ? 'x' : ' '}] \${txt}\\n\`;
+            return \`- [\${cb.checked ? 'x' : ' '}] \${txt}\\n\${nestedMd}\`;
           }
+          const inlineTxt = inlineNodes.map(walk).join('').trim();
           if (node.parentElement?.tagName.toLowerCase() === 'ol') {
             const idx = Array.from(node.parentElement.children).indexOf(node) + 1;
-            return \`\${idx}. \${inner.trim()}\\n\`;
+            return \`\${idx}. \${inlineTxt}\\n\${nestedMd}\`;
           }
-          return \`- \${inner.trim()}\\n\`;
+          return \`- \${inlineTxt}\\n\${nestedMd}\`;
         }
         case 'ul':     case 'ol':              return inner;
         case 'table': {
@@ -5205,11 +5211,8 @@ if (searchQuery) {
         .replace(/\`(.+?)\`/g,          '<code>$1</code>')
         .replace(/~~(.+?)~~/g,          '<del>$1</del>')
         .replace(/\\+\\+(.+?)\\+\\+/g,  '<u>$1</u>')
-        .replace(/(?<!!)\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-      if (/^(#{1,3})\\s/.test(raw)) {
-        const lvl = raw.match(/^(#+)/)[1].length;
-        l = \`<h\${lvl}>\${l.replace(/^#+\\s/, '')}</h\${lvl}>\`;
-      }
+        .replace(/(?<!!)\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+        .replace(/(?<!['"=])(https?:\\/\\/[^\\s<>"']+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
       return l;
     };
     const lines = md.split('\\n');
@@ -5224,30 +5227,51 @@ if (searchQuery) {
         out.push(\`<pre>\${codeLines.join('\\n')}</pre>\`);
         continue;
       }
-      if (/^[-*]\\s/.test(lines[i])) {
-        const items = [];
-        let hasTask = false;
-        while (i < lines.length && /^[-*]\\s/.test(lines[i])) {
-          const tm = lines[i].match(/^[-*]\\s\\[([ x])\\]\\s(.*)/);
-          if (tm) {
-            hasTask = true;
-            const chk = tm[1] === 'x';
-            items.push(\`<li class="task-item\${chk ? ' done' : ''}"><input type="checkbox" class="task-check"\${chk ? ' checked' : ''}> <span>\${inline(tm[2])}</span></li>\`);
-          } else {
-            items.push(\`<li>\${inline(lines[i].slice(2))}</li>\`);
+      if (/^[-*]\\s/.test(lines[i]) || /^\\d+\\.\\s/.test(lines[i])) {
+        const buildLevel = (ls, idx, d) => {
+          const its = [];
+          let hasTk = false, isOrd = null;
+          let j = idx;
+          while (j < ls.length) {
+            const ln = ls[j];
+            if (ln.trim() === '') { j++; continue; }
+            const ind = (ln.match(/^(\\s*)/) || ['', ''])[1].length;
+            if (ind !== d) break;
+            const bm = /^\\s*[-*]\\s(.*)$/.exec(ln);
+            const om = /^\\s*\\d+\\.\\s(.*)$/.exec(ln);
+            const tm = /^\\s*[-*]\\s\\[([ x])\\]\\s(.*)$/.exec(ln);
+            if (!bm && !om) break;
+            if (isOrd === null) isOrd = !!om;
+            else if (isOrd !== !!om) break;
+            let content, liClass = '';
+            if (tm) {
+              hasTk = true;
+              const chk = tm[1] === 'x';
+              liClass = \`task-item\${chk ? ' done' : ''}\`;
+              content = \`<input type="checkbox" class="task-check"\${chk ? ' checked' : ''}> <span>\${inline(tm[2])}</span>\`;
+            } else if (bm) {
+              content = inline(bm[1]);
+            } else {
+              content = inline(om[1]);
+            }
+            j++;
+            let k = j;
+            while (k < ls.length && ls[k].trim() === '') k++;
+            let nestedHtml = '';
+            if (k < ls.length) {
+              const ni = (ls[k].match(/^(\\s*)/) || ['', ''])[1].length;
+              if (ni > d) { const nr = buildLevel(ls, k, ni); if (!tm) nestedHtml = nr.html; j = nr.nextJ; }
+            }
+            its.push(\`<li\${liClass ? \` class="\${liClass}"\` : ''}>\${content}\${nestedHtml}</li>\`);
           }
-          i++;
-        }
-        out.push(hasTask
-          ? \`<ul class="task-list">\${items.join('')}</ul>\`
-          : \`<ul>\${items.join('')}</ul>\`);
-      } else if (/^\\d+\\.\\s/.test(lines[i])) {
-        const items = [];
-        while (i < lines.length && /^\\d+\\.\\s/.test(lines[i])) {
-          items.push(\`<li>\${inline(lines[i].replace(/^\\d+\\.\\s/, ''))}</li>\`);
-          i++;
-        }
-        out.push(\`<ol>\${items.join('')}</ol>\`);
+          if (its.length === 0) return { html: '', nextJ: j };
+          const tag = isOrd ? 'ol' : 'ul';
+          const cls = !isOrd && hasTk ? ' class="task-list"' : '';
+          return { html: \`<\${tag}\${cls}>\${its.join('')}</\${tag}>\`, nextJ: j };
+        };
+        const r = buildLevel(lines, i, 0);
+        if (r.html) out.push(r.html);
+        i = r.nextJ;
       } else if (/^> /.test(lines[i])) {
         const bqLines = [];
         while (i < lines.length && /^> /.test(lines[i])) {
@@ -5261,7 +5285,10 @@ if (searchQuery) {
       } else if (/^\\|/.test(lines[i])) {
         const rows = [];
         while (i < lines.length && /^\\|/.test(lines[i])) {
-          if (!/^[\\|\\s\\-:]+$/.test(lines[i])) {
+          // A real separator row has every cell matching :?---+:? (3+ dashes).
+          // Body rows with a single dash or empty cells must not be skipped.
+          const isSep = lines[i].split('|').slice(1, -1).every(c => /^:?-{3,}:?$/.test(c.trim()));
+          if (!isSep) {
             const cells = lines[i].split('|').slice(1, -1).map(c => c.trim());
             rows.push(cells);
           }
@@ -5275,26 +5302,25 @@ if (searchQuery) {
           const cellContent = raw => {
             const html = inline(raw);
             const parts = html.split('<br>');
-            if (parts.length < 2) return html;
             const norm = p => p.replace(/\\\\(.)/g, '$1');
             const ps = parts.map(norm);
-            const allCheck   = ps.every(p => /^[-*] \\[[ x]\\] /.test(p));
-            const allBullet  = !allCheck && ps.every(p => /^[-*] \\S/.test(p));
-            const allOrdered = !allCheck && !allBullet && ps.every(p => /^\\d+\\. \\S/.test(p));
+            const allCheck   = ps.every(p => /^[-*] \\[[ x]\\]( |$)/.test(p));
+            const allBullet  = !allCheck && ps.every(p => /^[-*]( |$)/.test(p));
+            const allOrdered = !allCheck && !allBullet && ps.every(p => /^\\d+\\.( |$)/.test(p));
             if (allCheck) {
               const its = ps.map(p => {
-                const ck = /^[-*] \\[x\\] /i.test(p);
-                const tx = p.replace(/^[-*] \\[[ x]\\] /i, '');
-                return '<li class="task-item' + (ck ? ' done' : '') + '"><input type="checkbox" class="task-check"' + (ck ? ' checked' : '') + ' disabled> <span>' + tx + '</span></li>';
+                const ck = /^[-*] \\[x\\]( |$)/i.test(p);
+                const tx = p.replace(/^[-*] \\[[ x]\\]( |$)/i, '');
+                return '<li class="task-item' + (ck ? ' done' : '') + '"><input type="checkbox" class="task-check"' + (ck ? ' checked' : '') + '> <span>' + tx + '</span></li>';
               }).join('');
               return '<ul class="cell-list task-list">' + its + '</ul>';
             }
             if (allBullet) {
-              const its = ps.map(p => '<li>' + p.replace(/^[-*] /, '') + '</li>').join('');
+              const its = ps.map(p => '<li>' + p.replace(/^[-*]( |$)/, '') + '</li>').join('');
               return '<ul class="cell-list">' + its + '</ul>';
             }
             if (allOrdered) {
-              const its = ps.map(p => '<li>' + p.replace(/^\\d+\\. /, '') + '</li>').join('');
+              const its = ps.map(p => '<li>' + p.replace(/^\\d+\\.( |$)/, '') + '</li>').join('');
               return '<ol class="cell-list">' + its + '</ol>';
             }
             return html;
@@ -5303,6 +5329,10 @@ if (searchQuery) {
           const body = rows.slice(1).map(r => \`<tr>\${r.map(c => \`<td>\${cellContent(c)}</td>\`).join('')}</tr>\`).join('');
           out.push(\`<div class="table-scroll"><table>\${head}\${body ? \`<tbody>\${body}</tbody>\` : ''}</table></div>\`);
         }
+      } else if (/^(#{1,3})\\s/.test(lines[i])) {
+        const lvl = lines[i].match(/^(#+)/)[1].length;
+        out.push(\`<h\${lvl}>\${inline(lines[i].replace(/^#+\\s+/, ''))}</h\${lvl}>\`);
+        i++;
       } else {
         if (!lines[i].trim()) {
           let blanks = 0;
@@ -5311,8 +5341,7 @@ if (searchQuery) {
           for (let b = 0; b < brs; b++) out.push('<p><br></p>');
           continue;
         }
-        const rendered = inline(lines[i]);
-        out.push(/^<h[1-6]>/.test(rendered) ? rendered : \`<p>\${rendered}</p>\`);
+        out.push(\`<p>\${inline(lines[i])}</p>\`);
         i++;
       }
     }
