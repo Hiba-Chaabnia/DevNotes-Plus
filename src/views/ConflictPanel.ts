@@ -54,7 +54,7 @@ export class ConflictPanel {
     this.panel.webview.html = this.buildHtml(this.panel.webview, ours, theirs, incomingRef, oursRef, this.storage.getTags());
 
     this.panel.webview.onDidReceiveMessage(
-      async (msg: { type: string; side?: 'ours' | 'theirs' | 'both'; mergedNote?: { title: string; tags: string[]; content: string } }) => {
+      async (msg: { type: string; side?: 'ours' | 'theirs' | 'both'; mergedNote?: { title: string; tags: string[]; content: string }; dataUrl?: string; name?: string }) => {
         if (msg.type === 'resolve' && msg.side) {
           if (this.resolved) return;
           this.resolved = true;
@@ -65,6 +65,13 @@ export class ConflictPanel {
           }
           this.onResolved();
           this.panel.dispose();
+        } else if (msg.type === 'saveAsset' && msg.dataUrl && msg.name) {
+          const base64 = msg.dataUrl.replace(/^data:image\/[^;]+;base64,/, '');
+          const fileUri = vscode.Uri.joinPath(this.storage.folderUri, 'assets', msg.name);
+          await vscode.workspace.fs.writeFile(fileUri, Buffer.from(base64, 'base64'));
+          const webviewUri = this.panel.webview.asWebviewUri(fileUri).toString();
+          const storagePath = '.devnotes/assets/' + msg.name;
+          this.panel.webview.postMessage({ type: 'assetSaved', storagePath, webviewUri });
         }
       },
       null,
@@ -205,6 +212,7 @@ export class ConflictPanel {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    min-width: 0;
   }
 
   /* ── Card ── */
@@ -425,6 +433,8 @@ export class ConflictPanel {
   }
   .md ul, .md ol { padding-left: 20px; margin-bottom: .55em; }
   .md li { margin-bottom: .2em; }
+  .md td ul, .md td ol { padding-left: 14px; margin: 0; }
+  .md td li { margin-bottom: 0; }
   .md blockquote {
     border-left: 2px solid var(--vscode-panel-border);
     padding-left: 10px;
@@ -435,7 +445,7 @@ export class ConflictPanel {
   .md h2 { font-size: 1.16em; font-weight: 700; margin: .35em 0 .2em; }
   .md h3 { font-size: 1.08em; font-weight: 600; margin: .3em 0 .2em; }
   .md table { border-collapse: collapse; width: 100%; margin-bottom: .55em; font-size: .95em; }
-  .md th, .md td { padding: 4px 10px; border: 1px solid rgba(${hexToRgb(UI_COLORS.neutral)},.25); text-align: left; }
+  .md th, .md td { padding: 4px 10px; border: 1px solid rgba(${hexToRgb(UI_COLORS.neutral)},.25); text-align: left; vertical-align: top; }
   .md th { font-weight: 700; background: rgba(${hexToRgb(UI_COLORS.neutral)},.08); }
   .md ul.task-list { list-style: none; padding-left: 0; }
   .md ul.task-list li { display: flex; align-items: flex-start; gap: 6px; }
@@ -760,6 +770,7 @@ export class ConflictPanel {
   const theirs      = ${theirsJson};
   const tags        = ${tagsJson};
   const imageUriMap = ${imageUriMapJson};
+  const reverseImageUriMap = Object.fromEntries(Object.entries(imageUriMap).map(([k,v]) => [v,k]));
   const incomingRef = ${refJson};
   const oursRef     = ${oursRefJson};
   const starEmpty      = ${starEmptyJson};
@@ -885,7 +896,21 @@ export class ConflictPanel {
       else cur.lines.push(text);
     });
 
-    groups.forEach(group => {
+    // Merge groups whose boundary falls inside a table — prevents split <table> elements
+    const merged = [];
+    for (const g of groups) {
+      const prev = merged[merged.length - 1];
+      if (prev &&
+          prev.lines[prev.lines.length - 1].startsWith('|') &&
+          g.lines[0].startsWith('|')) {
+        if (g.type === 'ins') prev.type = 'ins';
+        prev.lines.push(...g.lines);
+      } else {
+        merged.push({ type: g.type, lines: [...g.lines] });
+      }
+    }
+
+    merged.forEach(group => {
       const html = simpleMarkdown(group.lines.join('\\n'));
       if (group.type === 'ins') {
         const wrap = document.createElement('div');
@@ -1028,8 +1053,23 @@ export class ConflictPanel {
       if (_toolbar && modalMode === 'edit') { _toolbar.classList.add('visible'); updateToolbarState(_toolbar); }
     });
     rendered.addEventListener('blur', () => {
-      mergedContent = htmlToMd(rendered.innerHTML);
+      if (modalMode === 'edit') mergedContent = htmlToMd(rendered.innerHTML);
       if (_toolbar) _toolbar.classList.remove('visible');
+    });
+    rendered.addEventListener('paste', e => {
+      if (modalMode !== 'edit') return;
+      const items = e.clipboardData ? Array.from(e.clipboardData.items) : [];
+      const imgItem = items.find(it => it.kind === 'file' && it.type.startsWith('image/'));
+      if (!imgItem) return;
+      e.preventDefault();
+      const file = imgItem.getAsFile();
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const ext = (file.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+        vscode.postMessage({ type: 'saveAsset', dataUrl: reader.result, name: 'pasted-' + Date.now() + '.' + ext });
+      };
+      reader.readAsDataURL(file);
     });
     rendered.addEventListener('keydown', e => {
       if (e.key !== 'Enter') return;
@@ -1293,13 +1333,22 @@ export class ConflictPanel {
   document.getElementById('modal-cancel').addEventListener('click', closeModal);
   modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
   document.getElementById('modal-confirm').addEventListener('click', () => {
-    if (_rendered) mergedContent = htmlToMd(_rendered.innerHTML);
+    if (_rendered && modalMode === 'edit') mergedContent = htmlToMd(_rendered.innerHTML);
     vscode.postMessage({ type: 'resolve', side: 'both', mergedNote: { title: mergedTitle, tags: mergedTagIds, content: mergedContent } });
   });
 
 // ── Resolution buttons ────────────────────────────────────────────────────
   document.getElementById('keep-ours').addEventListener('click',   () => vscode.postMessage({ type: 'resolve', side: 'ours' }));
   document.getElementById('keep-theirs').addEventListener('click', () => vscode.postMessage({ type: 'resolve', side: 'theirs' }));
+
+  window.addEventListener('message', e => {
+    const msg = e.data;
+    if (msg.type === 'assetSaved') {
+      imageUriMap[msg.storagePath] = msg.webviewUri;
+      reverseImageUriMap[msg.webviewUri] = msg.storagePath;
+      document.execCommand('insertHTML', false, '<img src="' + msg.webviewUri + '" alt="" style="max-width:100%;border-radius:4px;margin:4px 0;display:block;">');
+    }
+  });
 
   // ── HTML → Markdown (reverses simpleMarkdown output for contenteditable save) ──
   function htmlToMd(html) {
@@ -1321,6 +1370,11 @@ export class ConflictPanel {
       case 'pre':    return '\`\`\`\\n' + (node.querySelector('code')?.textContent ?? kids()) + '\\n\`\`\`\\n\\n';
       case 'br':     return '\\n';
       case 'hr':     return '\\n---\\n\\n';
+      case 'img': {
+        const src = node.getAttribute('src') || '';
+        const alt = node.getAttribute('alt') || '';
+        return '\\n\\n![' + alt + '](' + (reverseImageUriMap[src] || src) + ')\\n\\n';
+      }
       case 'h1':     return '# '   + kids() + '\\n\\n';
       case 'h2':     return '## '  + kids() + '\\n\\n';
       case 'h3':     return '### ' + kids() + '\\n\\n';
@@ -1343,6 +1397,17 @@ export class ConflictPanel {
         return Array.from(node.querySelectorAll(':scope > li')).map((li, i) =>
           (i + 1) + '. ' + domToMd(li).trim()
         ).join('\\n') + '\\n\\n';
+      case 'table': {
+        const rows = Array.from(node.querySelectorAll('tr'));
+        if (!rows.length) return '';
+        const toCell = cell => domToMd(cell).trimStart().replace(/\\n/g, '<br>').replace(/(<br>)+$/, '').replace(/\\|/g, '\\\\|');
+        const mdRows = rows.map(tr => '| ' + Array.from(tr.querySelectorAll('th, td')).map(toCell).join(' | ') + ' |');
+        const colCount = rows[0].querySelectorAll('th, td').length;
+        mdRows.splice(1, 0, '| ' + Array(colCount).fill('---').join(' | ') + ' |');
+        return mdRows.join('\\n') + '\\n\\n';
+      }
+      case 'thead': case 'tbody': case 'tr': return kids();
+      case 'th': case 'td': return kids();
       case 'li':  return kids();
       case 'div': return kids() + '\\n';
       default:    return kids();
@@ -1354,6 +1419,22 @@ export class ConflictPanel {
     if (!md) return '';
     const e = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     const inline = raw => {
+      if (raw.includes('<br>')) {
+        const parts = raw.split('<br>');
+        const ne = parts.filter(p => p.trim());
+        const isTask = ne.length > 0 && ne.every(p => /^[-*]\\s\\[[ x]\\]/.test(p.trim()));
+        const isUl   = !isTask && ne.length > 0 && ne.every(p => /^[-*]\\s/.test(p.trim()));
+        const isOl   = !isTask && !isUl && ne.length > 0 && ne.every(p => /^\\d+\\.\\s/.test(p.trim()));
+        if (isTask) {
+          return '<ul class="task-list">' + parts.filter(p => p.trim()).map(p => {
+            const m = p.trim().match(/^[-*]\\s\\[([ x])\\]\\s?(.*)/);
+            return m ? '<li><input type="checkbox"' + (m[1]==='x'?' checked':'') + '><span>' + inline(m[2]) + '</span></li>' : '';
+          }).join('') + '</ul>';
+        }
+        if (isUl) return '<ul>' + parts.filter(p => p.trim()).map(p => '<li>' + inline(p.trim().slice(2)) + '</li>').join('') + '</ul>';
+        if (isOl) return '<ol>' + parts.filter(p => p.trim()).map(p => '<li>' + inline(p.trim().replace(/^\\d+\\.\\s/, '')) + '</li>').join('') + '</ol>';
+        return parts.map(part => inline(part)).join('<br>');
+      }
       const imgMatch = raw.match(/^!\\[([^\\]]*)\\]\\(([^)]+)\\)/);
       if (imgMatch) {
         const src = imageUriMap[imgMatch[2]] || imgMatch[2];
