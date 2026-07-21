@@ -33,6 +33,10 @@ media/                  # Extension icons and built webview assets
 out/                    # Compiled extension host output (gitignored)
 ```
 
+## Naming Convention
+
+"DevNotes+" is reserved for marketplace-facing fields (`displayName`, the activity bar `title`) and docs. Use "DevNotes" everywhere else — command titles/categories, view names, and in-app messages — to avoid duplicated branding in the UI (e.g. an activity bar tooltip reading "DevNotes+: DevNotes").
+
 ## Development Workflow
 
 To watch for TypeScript changes in the extension host:
