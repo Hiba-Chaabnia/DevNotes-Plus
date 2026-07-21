@@ -213,6 +213,14 @@ export class SidebarView implements vscode.WebviewViewProvider {
     this._pushTimer = setTimeout(() => this._flush(), 16);
   }
 
+  /** Reveals the Notes view (expanding it if collapsed) and scrolls to/highlights one card. */
+  async revealNote(noteId: string): Promise<void> {
+    await vscode.commands.executeCommand('devnotesPlusView.focus');
+    clearTimeout(this._pushTimer);
+    await this._flush();
+    this.view?.webview.postMessage({ type: 'revealNote', noteId });
+  }
+
   private async _flush(): Promise<void> {
     if (!this.view?.visible) return;
     const wsRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
@@ -2911,7 +2919,19 @@ export class SidebarView implements vscode.WebviewViewProvider {
   // ── Init ────────────────────────────────────────────────────────────────
   vscode.postMessage({ type: 'ready' });
 
+  function highlightCard(id) {
+    const card = cardList.querySelector('[data-id="' + id + '"]');
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    card.classList.add('highlight-new');
+    setTimeout(() => card.classList.remove('highlight-new'), 1200);
+  }
+
   window.addEventListener('message', ({ data: msg }) => {
+    if (msg.type === 'revealNote') {
+      requestAnimationFrame(() => highlightCard(msg.noteId));
+      return;
+    }
     if (msg.type === 'setCodeLink') {
       if (pendingCodeLinkCallback) {
         pendingCodeLinkCallback(msg.file ?? null, msg.line ?? null, msg.lineContent ?? null);
@@ -2988,14 +3008,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
       renderTagBar();
       renderCards();
       if (addedId) {
-        requestAnimationFrame(() => {
-          const newCard = cardList.querySelector('[data-id="' + addedId + '"]');
-          if (newCard) {
-            newCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            newCard.classList.add('highlight-new');
-            setTimeout(() => newCard.classList.remove('highlight-new'), 1200);
-          }
-        });
+        requestAnimationFrame(() => highlightCard(addedId));
       }
       if (lastSavedNoteId) {
         const savedId = lastSavedNoteId;

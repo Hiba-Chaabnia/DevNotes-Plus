@@ -288,6 +288,7 @@ async function _activate(context: vscode.ExtensionContext): Promise<void> {
   context.subscriptions.push(
     vscode.commands.registerCommand('devnotesPlus.focusNote', (noteId: string) => {
       EditorPanel.show(context, storage, noteId, () => sidebar.push());
+      sidebar.revealNote(noteId);
     })
   );
 
