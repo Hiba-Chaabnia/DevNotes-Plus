@@ -1,13 +1,14 @@
-# DevNotes
+# DevNotes+
 
 ***The note panel your editor was missing***
 
 The problem isn't that developers don't document. It's that there's nowhere good to put it. Markdown files in the repo root accumulate and get ignored. Code comments can't hold screenshots. External apps don't know your codebase.
 
-DevNotes was built for exactly this gap: *notes are linked to specific files and lines*, *organized by branch*, *stored alongside their images and attachments*, *shared selectively with teammates*, and *never more than a sidebar away*.
+DevNotes+ was built for exactly this gap: *notes are linked to specific files and lines*, *organized by branch*, *stored alongside their images and attachments*, *shared selectively with teammates*, and *never more than a sidebar away*.
 
-And because DevNotes is also *an MCP server*, AI assistants like Claude Code can access that context directly—without copy-pasting notes into every conversation.
+And because DevNotes+ is also *an MCP server*, AI assistants like Claude Code can access that context directly—without copy-pasting notes into every conversation.
 
+<video src="https://github.com/user-attachments/assets/0bfa7e76-065f-4e0d-a73a-c919d8e5d9e2" controls></video>
 
 ## Quick Start
 
@@ -62,7 +63,9 @@ The sidebar also supports **inline editing** — click the body of any card to e
 
 ### Team Features
 
-All notes are private by default (gitignored). To share a note, toggle **Share this note** from its overflow menu — DevNotes adds an exception to `.devnotes/.gitignore` for that file so it flows through git like any other source file.
+<video src="https://github.com/user-attachments/assets/0f662ffa-b615-4e49-83d5-173916546227" controls></video>
+
+All notes are private by default (gitignored). To share a note, toggle **Share this note** from its overflow menu — DevNotes+ adds an exception to `.devnotes/.gitignore` for that file so it flows through git like any other source file.
 
 | Feature | Description |
 |---|---|
@@ -72,6 +75,8 @@ All notes are private by default (gitignored). To share a note, toggle **Share t
 
 ### GitHub Integration
 
+<video src="https://github.com/user-attachments/assets/f9da3926-c610-4cbd-8108-5f199f59e7e6" controls></video>
+
 Connect a GitHub account from the sidebar settings panel (uses VS Code's built-in GitHub auth — no personal access token needed):
 
 - **Link a PR or issue** — paste a GitHub URL to attach it to a note; status (open, merged, closed) is displayed on the card
@@ -79,7 +84,7 @@ Connect a GitHub account from the sidebar settings panel (uses VS Code's built-i
 
 ### Claude Code / MCP
 
-Register DevNotes as an MCP server so Claude Code can interact with your notes from the conversation:
+Register DevNotes+ as an MCP server so Claude Code can interact with your notes from the conversation:
 
 ```
 Command Palette → DevNotes: Connect to Claude Code (Register MCP Server)

@@ -2,7 +2,7 @@
   "name": "devnotes-plus",
   "displayName": "DevNotes+",
   "description": "Project-scoped developer notes anchored to files & git branches. Features rich block editor (images, tables, code), Claude Code integration, team sharing, and more.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "icon": "media/icon.png",
   "publisher": "HibaChaabnia",
   "license": "AGPL-3.0",
@@ -25,7 +25,7 @@
       "activitybar": [
         {
           "id": "devnotes-plus-container",
-          "title": "DevNotes",
+          "title": "DevNotes+",
           "icon": "media/icon.svg"
         }
       ]
@@ -35,7 +35,7 @@
         {
           "type": "webview",
           "id": "devnotesPlusNoFolderView",
-          "name": "DevNotes",
+          "name": "",
           "when": "workspaceFolderCount == 0"
         },
         {
