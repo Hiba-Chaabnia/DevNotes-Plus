@@ -123,7 +123,7 @@ function hasConflict(raw: string): boolean {
  */
 function resolveConflictRaw(raw: string, side: 'ours' | 'theirs'): string {
   return raw.replace(
-    /^<<<<<<< .+\n([\s\S]*?)^=======\n([\s\S]*?)^>>>>>>> .+$\n?/gm,
+    /^<<<<<<< .+\r?\n([\s\S]*?)^=======\r?\n([\s\S]*?)^>>>>>>> .+$\r?\n?/gm,
     (_, ours: string, theirs: string) => side === 'ours' ? ours : theirs
   );
 }

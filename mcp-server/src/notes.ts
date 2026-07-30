@@ -101,7 +101,7 @@ function parseNoteFile(raw: string, fileName: string): Note | null {
   // Strip conflict markers, keeping the HEAD (ours) side so the note stays readable
   const effective = isConflicted
     ? raw.replace(
-        /^<<<<<<< .+\n([\s\S]*?)^=======\n[\s\S]*?^>>>>>>> .+$\n?/gm,
+        /^<<<<<<< .+\r?\n([\s\S]*?)^=======\r?\n[\s\S]*?^>>>>>>> .+$\r?\n?/gm,
         (_, ours: string) => ours
       )
     : raw;
