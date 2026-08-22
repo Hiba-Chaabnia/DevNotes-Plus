@@ -1,5 +1,10 @@
 # DevNotes+
 
+[![VS Code Marketplace](https://vsmarketplacebadges.dev/version-short/HibaChaabnia.devnotes-plus.svg?label=VS%20Code%20Marketplace&color=007ACC)](https://marketplace.visualstudio.com/items?itemName=HibaChaabnia.devnotes-plus)
+[![VS Code Installs](https://vsmarketplacebadges.dev/installs-short/HibaChaabnia.devnotes-plus.svg?label=VS%20Code%20installs&color=007ACC)](https://marketplace.visualstudio.com/items?itemName=HibaChaabnia.devnotes-plus)
+[![Open VSX](https://img.shields.io/open-vsx/v/HibaChaabnia/devnotes-plus?label=Open%20VSX&color=C160EF)](https://open-vsx.org/extension/HibaChaabnia/devnotes-plus)
+[![Open VSX Downloads](https://img.shields.io/open-vsx/dt/HibaChaabnia/devnotes-plus?label=Open%20VSX%20downloads&color=C160EF)](https://open-vsx.org/extension/HibaChaabnia/devnotes-plus)
+
 ***The note panel your editor was missing***
 
 The problem isn't that developers don't document. It's that there's nowhere good to put it. Markdown files in the repo root accumulate and get ignored. Code comments can't hold screenshots. External apps don't know your codebase.
