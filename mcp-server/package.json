@@ -1,7 +1,27 @@
 {
   "name": "devnotes-mcp",
   "version": "1.0.0",
-  "description": "MCP server for DevNotes — note tools for Claude Code",
+  "description": "MCP server for DevNotes+ — exposes project notes as tools, resources and prompts for Claude Code.",
+  "license": "AGPL-3.0",
+  "author": "Hiba Chaabnia",
+  "homepage": "https://hiba-chaabnia.github.io/DevNotes-Plus/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Hiba-Chaabnia/DevNotes-Plus.git",
+    "directory": "mcp-server"
+  },
+  "bugs": {
+    "url": "https://github.com/Hiba-Chaabnia/DevNotes-Plus/issues"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "claude",
+    "claude-code",
+    "devnotes",
+    "notes"
+  ],
   "main": "dist/index.js",
   "bin": {
     "devnotes-mcp": "dist/index.js"
