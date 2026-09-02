@@ -1,0 +1,888 @@
+/* DevNotes+ — hero VS Code workbench mock.
+   Standalone stylesheet: edit this file to restyle the mock without touching
+   index.html. Markup lives in index.html (search "VS Code workbench mock");
+   behaviour lives in assets/vscode-mock.js.
+
+   Colours are VS Code "Dark Modern" workbench values. The DevNotes+ panel
+   reproduces src/views/SidebarView.ts — pill tokens at :1153, the .card rule,
+   tag colours from src/utils/colors.ts NOTE_COLORS, and the default tag set
+   from src/services/NoteStorage.ts DEFAULT_TAGS. Keep them in sync. */
+
+/* ── Hero VS Code Mock ──────────────────────────────────────────────────
+   Colours are VS Code "Dark Modern" workbench values; the DevNotes+ panel
+   reproduces src/views/SidebarView.ts (pill tokens at :1153, card at .card,
+   tag colours from src/utils/colors.ts NOTE_COLORS, default tags from
+   src/services/NoteStorage.ts DEFAULT_TAGS).                             */
+.hero-visual {
+  position: relative;
+  user-select: none;
+  max-width: 1080px;
+  margin: 72px auto 0;
+  text-align: left;
+}
+
+.vsc {
+  --vsc-chrome:   #181818;
+  --vsc-editor:   #1F1F1F;
+  --vsc-border:   #2B2B2B;
+  --vsc-fg:       #CCCCCC;
+  --vsc-dim:      #9D9D9D;
+  --vsc-faint:    #6E6E6E;
+  --vsc-act-fg:   #858585;   /* activityBar.inactiveForeground */
+  --vsc-act-fg-active:  #D7D7D7;                /* activityBar.foreground */
+  --vsc-act-active-bg:  rgba(255,255,255,0.09); /* activityBar.activeBackground */
+  --vsc-accent:   #0078D4;
+  --sb-width:     300px;   /* panel width */
+  --vsc-act-w:     48px;   /* activity bar track */
+  --vsc-badge:    #616161;
+  --vsc-input-bg:     #313131;  /* input.background */
+  --vsc-input-border: #3C3C3C;  /* input.border */
+  --vsc-placeholder:  #989898;  /* input.placeholderForeground */
+  --note-red:     #FF524D;
+  --note-yellow:  #FFDE5A;
+  --note-green:   #31B54C;
+  --note-blue:    #43B4FB;
+  --note-lav:     #DB95FD;
+  --note-ink:     #1a1a2e;
+
+  /* VS Code's own type stack. The mock deliberately does not inherit the
+     site brand fonts — a screenshot of an editor should read as the editor.
+     Both are system fonts, so nothing extra is fetched. */
+  --vsc-font-ui:   "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --vsc-font-code: "Cascadia Code", Consolas, monospace;
+
+  background: var(--vsc-chrome);
+  border: 1px solid var(--vsc-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+  font-family: var(--vsc-font-ui);
+  color: var(--vsc-fg);
+  font-size: 13px;
+}
+
+/* ── Title bar ── */
+.vsc-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 14px;
+  background: var(--vsc-chrome);
+  border-bottom: 1px solid var(--vsc-border);
+}
+.vsc-dots { display: flex; gap: 7px; flex-shrink: 0; }
+.vsc-dot { width: 11px; height: 11px; border-radius: 50%; }
+.dot-red { background: #FF5F56; }
+.dot-yellow { background: #FFBD2E; }
+.dot-green { background: #27C93F; }
+.vsc-titlebar-name {
+  flex: 1;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--vsc-dim);
+}
+
+/* ── Workbench: activity bar | sidebar | editor ── */
+.vsc-body {
+  display: grid;
+  /* Both tracks are variables so the hero entrance can animate the panel
+     open from a zero-width second track with one keyframe at every
+     breakpoint — see the entrance block in index.html. */
+  grid-template-columns: var(--vsc-act-w) var(--sb-width) 1fr;
+  height: 560px;
+}
+
+.vsc-activitybar {
+  background: var(--vsc-chrome);
+  border-right: 1px solid var(--vsc-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  gap: 2px;
+}
+.vsc-act {
+  width: 48px; height: 42px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--vsc-act-fg);
+  cursor: pointer;
+  transition: color .15s;
+}
+.vsc-act:hover { color: var(--vsc-fg); }
+/* The active item reads as a lighter rounded chip behind a brightened icon,
+   not a left accent bar. The chip is a pseudo-element so it paints under the
+   glyph; .vsc-act > * lifts the icon and the badge back above it. */
+.vsc-act.active { color: var(--vsc-act-fg-active); }
+.vsc-act.active::before {
+  content: '';
+  position: absolute;
+  inset: 3px 5px;
+  border-radius: 8px;
+  background: var(--vsc-act-active-bg);
+}
+.vsc-act > * { position: relative; }
+/* Activity bar count badge (Source Control shows one when there are changes). */
+.vsc-act { position: relative; }
+.vsc-act-badge {
+  position: absolute;
+  right: 7px; bottom: 5px;
+  min-width: 15px; height: 15px;
+  padding: 0 3px;
+  border-radius: 20px;
+  background: var(--vsc-accent);
+  color: #FFFFFF;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 15px;
+  text-align: center;
+}
+/* Codicons sit on mixed 16 and 24 unit grids; sizing the box normalises them. */
+.vsc-act svg { width: 21px; height: 21px; }
+/* The DevNotes+ entry inlines the extension's own icon — the very file it
+   contributes — with its strokes switched to currentColor so it tints like every
+   other icon. It is inlined rather than masked because the source carries
+   width/height="100%" and so has no intrinsic size: as a mask-image it vanishes
+   in any browser that drops the shorthand's `/ contain`. Its viewBox is 497x406,
+   so preserveAspectRatio letterboxes it inside the square box. */
+.vsc-act .vsc-act-devnotes {
+  width: 24px;
+  height: 24px;
+}
+.vsc-act-spacer { flex: 1; }
+
+/* ── DevNotes+ sidebar ── */
+.vsc-sidebar {
+  background: var(--vsc-chrome);
+  border-right: 1px solid var(--vsc-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;   /* a grid item will not shrink past its content without this */
+}
+
+.vsc-viewtitle {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px 8px;
+  font-size: 13px;
+  color: var(--vsc-fg);
+  font-weight: 400;
+}
+.vsc-viewtitle svg { width: 16px; height: 16px; opacity: .8; }
+.vsc-section-head {
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 10px 6px;
+  font-size: var(--sb-section-fs);
+  font-weight: 700;
+  color: var(--vsc-fg);
+}
+.vsc-section-head .chev { display: flex; color: var(--vsc-fg); }
+.vsc-section-head .chev svg { width: 16px; height: 16px; }
+.vsc-section-head .spacer { flex: 1; }
+.vsc-section-head .sb-iconbtn svg {
+  width: var(--sb-refresh-size);
+  height: var(--sb-refresh-size);
+}
+
+/* ── DevNotes+ panel ──────────────────────────────────────────────────────
+   Every value below is lifted from src/views/SidebarView.ts. Two things are
+   easy to get wrong and are called out where they occur:
+     - Tag chips and pills are NOT solid. applyChipStyle()/applyPillStyle()
+       tint the background to 18% alpha and use the tag colour for the border
+       and the text. Only an *active* filter chip goes solid, and at rest the
+       only active chip is "All".
+     - The star sits at the END of row 1 (title, overflow, star) and when on
+       it is full-opacity foreground — there is no gold star in the real
+       panel. */
+.vsc-sidebar {
+  /* :root pill tokens, SidebarView.ts. */
+  --pill-font:   11px;
+  --pill-py:     0px;
+  --pill-px:     7px;
+  --pill-border: 1.5px;
+  --pill-radius: 20px;
+  --pill-gap:    4px;
+
+  --sb-topbar-py:     8px;
+  --sb-topbar-px:     10px;
+  --sb-row-gap:       6px;
+
+  --sb-pill-h:        20px;
+  --sb-pill-fs:       11px;
+  --sb-pill-px:       8px;
+  --sb-pill-radius:   10px;
+  --sb-pill-icon:     13px;
+
+  --sb-new-fs:        11px;
+  --sb-new-py:        3px;
+  --sb-new-px:        8px;
+  --sb-new-radius:    10px;
+
+  --sb-search-fs:     12px;
+  --sb-search-py:     2px;
+  --sb-search-px:     8px;
+  --sb-search-radius: 6px;
+
+  --sb-icon-size:     14px;
+  --sb-icon-pad:      5px;
+
+  --sb-tagbar-py:     6px;
+  --sb-tagbar-gap:    4px;
+  --sb-chip-icon:     12px;
+  --sb-chip-nudge:    0px;   /* vertical offset of a chip's label vs its icon */
+
+  --sb-section-fs:    12px;  /* "Notes" section header */
+  --sb-activity-fs:   12px;  /* "Activity" footer */
+  --sb-refresh-size:  16px;  /* refresh button in the "Notes" header */
+
+  --sb-cards-pad:     10px;
+  --sb-cards-gap:     10px;
+  --sb-card-py:       10px;
+  --sb-card-px:       12px;
+  --sb-card-gap:      6px;
+  --sb-card-radius:   10px;
+  --sb-card-title-fs: 13px;
+  --sb-card-body-fs:  12px;
+  --sb-card-date-fs:  10px;
+  /* rgba(hexToRgb(UI_COLORS.neutral), .08) */
+  --card-divider: rgba(128,128,128,.08);
+}
+
+/* .topbar */
+.sb-topbar {
+  display: flex; flex-direction: column; gap: var(--sb-row-gap);
+  padding: var(--sb-topbar-py) var(--sb-topbar-px) calc(var(--sb-topbar-py) - 2px);
+  border-bottom: 1px solid var(--vsc-border);
+}
+/* .topbar-row */
+.sb-row { display: flex; align-items: center; gap: var(--sb-row-gap); }
+
+/* .project-pill / .branch-pill */
+.sb-pill {
+  display: flex; align-items: center; gap: 4px;
+  height: var(--sb-pill-h);
+  padding: 2px var(--sb-pill-px) 2px calc(var(--sb-pill-px) - 2px);
+  border-radius: var(--sb-pill-radius);
+  border: 1px solid transparent;
+  background: var(--vsc-badge);
+  color: #FFFFFF;
+  font-size: var(--sb-pill-fs);
+  font-weight: 600;
+  min-width: 0; flex-shrink: 1;
+  overflow: hidden;
+}
+.sb-pill svg { width: var(--sb-pill-icon); height: var(--sb-pill-icon); flex-shrink: 0; }
+.sb-pill .lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+/* .new-note-pill */
+.sb-new {
+  display: flex; align-items: center; gap: 3px;
+  margin-left: auto;
+  background: var(--vsc-accent);
+  color: #FFFFFF;
+  border-radius: var(--sb-new-radius);
+  padding: var(--sb-new-py) var(--sb-new-px) var(--sb-new-py) calc(var(--sb-new-px) - 3px);
+  font-size: var(--sb-new-fs);
+  font-weight: 500;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+.sb-new svg { width: 11px; height: 11px; }
+
+/* .search-row */
+.sb-search {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; gap: 6px;
+  background: var(--vsc-input-bg);
+  border: 1px solid var(--vsc-input-border);
+  border-radius: var(--sb-search-radius);
+  padding: var(--sb-search-py) var(--sb-search-px);
+  font-size: var(--sb-search-fs);
+  color: var(--vsc-placeholder);
+}
+.sb-search svg { width: 12px; height: 12px; opacity: .5; flex-shrink: 0; }
+
+/* .icon-btn */
+.sb-iconbtn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: var(--sb-icon-pad);
+  border-radius: 4px;
+  color: var(--vsc-fg);
+  opacity: .7;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.sb-iconbtn:hover { opacity: 1; background: rgba(255,255,255,0.08); }
+.sb-iconbtn svg { width: var(--sb-icon-size); height: var(--sb-icon-size); }
+
+/* .tag-bar */
+.sb-tagbar {
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--sb-tagbar-gap);
+  padding: var(--sb-tagbar-py) var(--sb-topbar-px);
+  border-bottom: 1px solid var(--vsc-border);
+}
+
+/* .tag-chip */
+.sb-chip {
+  display: inline-flex; align-items: center; gap: var(--pill-gap);
+  font-size: var(--pill-font);
+  padding: var(--pill-py) var(--pill-px);
+  border-radius: var(--pill-radius);
+  border: var(--pill-border) solid transparent;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: opacity .12s;
+}
+.sb-chip:hover { opacity: .85; }
+.sb-chip svg { width: var(--sb-chip-icon); height: var(--sb-chip-icon); flex-shrink: 0; }
+/* .chip-label / .tag-chip-label — optical centring nudge */
+.sb-chip-label { transform: translateY(var(--sb-chip-nudge)); }
+/* .tag-chip.all.active — the one solid chip at rest */
+.sb-chip.all {
+  background: var(--vsc-accent);
+  color: #FFFFFF;
+  border-color: transparent;
+}
+/* .add-tag-btn */
+.sb-chip.add {
+  background: none;
+  border: var(--pill-border) dashed var(--vsc-border);
+  color: var(--vsc-faint);
+}
+
+/* .card-list */
+.sb-cards {
+  display: flex; flex-direction: column; gap: var(--sb-cards-gap);
+  padding: var(--sb-cards-pad);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+/* scrollbarSlider.background / .hoverBackground */
+.sb-cards::-webkit-scrollbar { width: 10px; }
+.sb-cards::-webkit-scrollbar-track { background: transparent; }
+.sb-cards::-webkit-scrollbar-thumb { background: rgba(121,121,121,0.4); }
+.sb-cards::-webkit-scrollbar-thumb:hover { background: rgba(100,100,100,0.7); }
+
+/* .card */
+.sb-card {
+  border: 1px solid var(--vsc-border);
+  border-radius: var(--sb-card-radius);
+  padding: var(--sb-card-py) var(--sb-card-px) calc(var(--sb-card-py) - 2px);
+  display: flex; flex-direction: column; gap: var(--sb-card-gap);
+  background: transparent;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, box-shadow .15s;
+}
+.sb-card:hover {
+  background: rgba(255,255,255,0.045);
+  box-shadow: 0 1px 4px rgba(0,0,0,.12);
+}
+/* .card:focus — VS Code focus border, not a colour accent */
+.sb-card.active {
+  background: rgba(255,255,255,0.045);
+  outline: 2px solid var(--vsc-accent);
+  outline-offset: 1px;
+}
+
+/* .card-row-1 — DOM order is title, overflow (hidden at rest), star */
+.sb-card-row1 { display: flex; align-items: center; gap: 4px; min-height: 24px; }
+.sb-card-title {
+  flex: 1; min-width: 0;
+  font-weight: 700;
+  font-size: var(--sb-card-title-fs);
+  color: var(--vsc-fg);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* .star-btn */
+.sb-star { color: var(--vsc-fg); opacity: .4; flex-shrink: 0; display: flex; }
+.sb-star svg { width: 14px; height: 14px; }
+.sb-star.on { opacity: 1; }
+
+/* .card-row-2 */
+.sb-card-tags { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+/* .tag-pill */
+.sb-tagpill {
+  display: inline-flex; align-items: center; gap: var(--pill-gap);
+  font-size: var(--pill-font);
+  padding: var(--pill-py) var(--pill-px);
+  border-radius: var(--pill-radius);
+  border: var(--pill-border) solid transparent;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.sb-tagpill svg { width: var(--sb-chip-icon); height: var(--sb-chip-icon); flex-shrink: 0; }
+/* .code-link-chip — the shared chip base, but monospaced and width-capped */
+.sb-codelink {
+  background: rgba(67,180,251,.18);
+  border-color: #43B4FB;
+  color: #43B4FB;
+  font-family: var(--vsc-font-code);
+  max-width: 200px;
+  flex-shrink: 0;
+}
+
+/* applyChipStyle() / applyPillStyle(), inactive branch:
+   background hexToRgba(color,.18), borderColor and color = the tag colour. */
+.tint-red    { background: rgba(255,82,77,.18);   border-color: #FF524D; color: #FF524D; }
+.tint-yellow { background: rgba(255,222,90,.18);  border-color: #FFDE5A; color: #FFDE5A; }
+.tint-green  { background: rgba(49,181,76,.18);   border-color: #31B54C; color: #31B54C; }
+.tint-blue   { background: rgba(67,180,251,.18);  border-color: #43B4FB; color: #43B4FB; }
+.tint-lav    { background: rgba(219,149,253,.18); border-color: #DB95FD; color: #DB95FD; }
+
+/* .card-row-3 */
+.sb-card-body {
+  font-size: var(--sb-card-body-fs);
+  line-height: 1.55;
+  color: var(--vsc-fg);
+  opacity: .85;
+  border-top: 1px solid var(--card-divider);
+  padding-top: 5px;
+}
+/* .card-preview.clamped */
+.sb-card-body.clamped {
+  max-height: 8em;
+  overflow: hidden;
+}
+.sb-card-body strong { color: var(--vsc-fg); }
+/* .card-preview ul:not(.task-list) / .card-preview li */
+.sb-card-body ul { list-style: disc; padding-left: 18px; margin: 2px 0; }
+.sb-card-body li { margin: 1px 0; }
+.sb-task { display: flex; align-items: flex-start; gap: 6px; margin-top: 5px; }
+.sb-checkbox {
+  width: 11px; height: 11px;
+  border: 1px solid var(--vsc-faint);
+  border-radius: 2px;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+/* .card-preview code */
+.sb-code {
+  font-family: var(--vsc-font-code);
+  font-size: .85em;
+  background: rgba(0,0,0,.1);
+  padding: 0 3px;
+  border-radius: 3px;
+}
+
+/* .card-row-4 */
+.sb-card-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 4px;
+  border-top: 1px solid var(--card-divider);
+  padding-top: 5px;
+  margin-top: 1px;
+}
+/* .owner-badge */
+.sb-owner {
+  display: inline-flex; align-items: center; gap: 4px;
+  color: var(--vsc-fg);
+  opacity: .7;
+  font-size: 10px;
+}
+/* .owner-initials — UI_COLORS.text on --vscode-badge-background */
+.sb-initials {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--vsc-badge);
+  opacity: .75;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: -.5px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--note-ink);
+  flex-shrink: 0;
+}
+/* .card-date */
+.sb-date { font-size: var(--sb-card-date-fs); opacity: .55; color: var(--vsc-fg); white-space: nowrap; }
+
+.vsc-sidebar-foot {
+  margin-top: auto;
+  border-top: 1px solid var(--vsc-border);
+  padding: 8px 12px;
+  font-size: var(--sb-activity-fs);
+  font-weight: 700;
+  color: var(--vsc-fg);
+  display: flex; align-items: center; gap: 5px;
+}
+.vsc-sidebar-foot .chev { display: flex; color: var(--vsc-fg); }
+.vsc-sidebar-foot .chev svg { width: 16px; height: 16px; }
+
+/* ── Editor pane ── */
+.vsc-editor {
+  background: var(--vsc-editor);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  position: relative;   /* offset parent for .bc-picker */
+}
+.vsc-tabs {
+  display: flex;
+  /* offsetParent for the tabs, so revealTab's offsetLeft is strip-relative. */
+  position: relative;
+  background: var(--vsc-chrome);
+  border-bottom: 1px solid var(--vsc-border);
+  /* Tabs keep their natural width and the strip scrolls, the way VS Code's
+     does — they never shrink to fit or wrap. mock-scenes.js keeps the active
+     one in view. The scrollbar is hidden; VS Code shows none at rest. */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.vsc-tabs::-webkit-scrollbar { display: none; }
+.vsc-tab {
+  display: flex; align-items: center; gap: 7px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 8px 14px;
+  font-size: 11.5px;
+  color: var(--vsc-dim);
+  border-right: 1px solid var(--vsc-border);
+  cursor: pointer;
+}
+.vsc-tab.active {
+  background: var(--vsc-editor);
+  color: #FFFFFF;
+  /* Inset rather than a border-top, which would need a matching padding
+     nudge to keep the tab from growing by its own 1px. */
+  box-shadow: inset 0 1.5px 0 var(--note-yellow);
+}
+.vsc-tab .js { color: #E9C46A; font-family: var(--vsc-font-code); font-size: 10px; font-weight: 700; }
+.vsc-tab .x { opacity: .5; font-size: 13px; line-height: 1; }
+
+.vsc-breadcrumb {
+  padding: 6px 16px;
+  font-size: 10.5px;
+  color: var(--vsc-faint);
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bc-seg { padding: 1px 3px; border-radius: 3px; }
+.bc-seg.is-hot { color: var(--vsc-fg); background: rgba(255, 255, 255, 0.09); }
+.bc-sep { padding: 0 1px; opacity: .7; }
+
+/* Anchored to the editor pane, which .vsc-editor positions, so the picker
+   hangs under the breadcrumb rather than scrolling with the code. */
+.bc-picker {
+  position: absolute;
+  top: 62px;
+  left: 12px;
+  z-index: 40;
+  min-width: 190px;
+  padding: 4px 0;
+  background: var(--vsc-chrome);
+  border: 1px solid var(--vsc-border);
+  border-radius: 4px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  display: none;
+}
+.mock-scene.s-crumb .bc-picker { display: block; }
+.bc-row {
+  display: flex; align-items: center; gap: 7px;
+  padding: 4px 12px;
+  font-size: 11.5px;
+  color: var(--vsc-fg);
+  white-space: nowrap;
+}
+.bc-row.is-focus { background: var(--vsc-accent); color: #FFFFFF; }
+.bc-ico { width: 14px; height: 14px; flex: 0 0 auto; color: #C09553; }
+.bc-ico.bc-file { color: var(--vsc-dim); }
+.bc-row.is-focus .bc-ico { color: #FFFFFF; }
+
+.vsc-code {
+  flex: 1;
+  padding: 10px 0;
+  font-family: var(--vsc-font-code);
+  font-size: 12.5px;
+  line-height: 1.8;
+  overflow: hidden;
+}
+.vsc-line {
+  display: flex;
+  align-items: center;
+  padding: 0 16px 0 0;
+  position: relative;
+  cursor: pointer;
+  transition: background .15s;
+}
+.vsc-line:hover { background: rgba(255,255,255,0.035); }
+.vsc-line.noted { background: rgba(255, 222, 90, 0.07); }
+.vsc-line.noted.current { background: rgba(255, 222, 90, 0.13); }
+
+.vsc-gutter {
+  width: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.vsc-gutter svg { width: 14px; height: 14px; display: none; }
+.vsc-line.noted .vsc-gutter svg { display: block; }
+
+.vsc-lineno {
+  width: 34px;
+  flex-shrink: 0;
+  text-align: right;
+  padding-right: 16px;
+  color: rgba(255,255,255,0.28);
+  font-size: 11px;
+}
+.vsc-linecode { white-space: pre; overflow: hidden; }
+
+.c-kw  { color: #C586C0; }
+.c-fn  { color: #DCDCAA; }
+.c-str { color: #CE9178; }
+.c-cm  { color: #6A9955; font-style: italic; }
+.c-var { color: #9CDCFE; }
+.c-num { color: #B5CEA8; }
+.c-op  { color: #D4D4D4; }
+
+/* hover widget shown on the annotated line */
+.vsc-hover {
+  position: absolute;
+  left: 66px;
+  top: calc(100% - 4px);
+  z-index: 20;
+  background: #252526;
+  border: 1px solid #454545;
+  border-radius: 4px;
+  padding: 7px 11px;
+  font-family: var(--vsc-font-ui);
+  font-size: 11px;
+  color: var(--vsc-fg);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+  white-space: nowrap;
+  display: none;
+}
+.vsc-line.noted:hover .vsc-hover { display: block; }
+.vsc-hover .h-title { font-weight: 700; color: var(--note-yellow); }
+.vsc-hover .h-sub { color: var(--vsc-faint); font-size: 10px; margin-top: 2px; }
+
+/* ── Status bar ── */
+.vsc-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 14px;
+  background: var(--vsc-chrome);
+  border-top: 1px solid var(--vsc-border);
+  font-size: 10.5px;
+  color: var(--vsc-dim);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.vsc-status-item { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.vsc-status-branch {
+  min-width: 0;
+  flex-shrink: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vsc-status-item svg { width: 11px; height: 11px; }
+.vsc-status-spacer { flex: 1; }
+.vsc-status-notes { color: var(--note-yellow); font-weight: 600; }
+.vsc-status-dim { opacity: .75; }
+
+/* ── Responsive ────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .vsc { --vsc-act-w: 44px; --sb-width: 310px; }
+  .vsc-body { min-height: 430px; }
+  .vsc-code { font-size: 11.5px; }
+}
+
+@media (max-width: 768px) {
+  .vsc-body { grid-template-columns: 1fr; min-height: 0; }
+  .vsc-activitybar, .vsc-editor { display: none; }
+  .vsc-sidebar { border-right: none; }
+}
+
+/* .show-more — appears when a card's content is clamped */
+/* .show-more — right-aligned, half-opacity until hovered */
+.sb-showmore {
+  display: flex;
+  justify-content: flex-end;
+  color: var(--vsc-fg);
+  opacity: .5;
+  margin-top: -2px;
+  cursor: pointer;
+  user-select: none;
+}
+.sb-showmore:hover { opacity: 1; }
+.sb-showmore svg { width: 14px; height: 14px; }
+
+/* .empty, SidebarView.ts:2227 — shown by renderCards() when visibleNotes() is
+   empty. Absolutely positioned here so the hero entrance can cross-fade it
+   against the cards without either one moving. */
+.sb-cards { position: relative; }
+.sb-empty {
+  display: none;
+  position: absolute;
+  inset: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+  color: var(--vsc-dim);   /* --vscode-descriptionForeground */
+  pointer-events: none;
+}
+.sb-empty p { font-size: 12px; line-height: 1.5; }
+.sb-empty strong { color: var(--vsc-fg); }
+
+/* Presentation-only pointer for the hero entrance. No counterpart in the
+   extension — it exists to show the activity-bar item being clicked. */
+.vsc-pointer {
+  display: none;
+  position: absolute;
+  left: 50%; top: 50%;
+  margin: -2px 0 0 -2px;
+  width: 20px; height: 20px;
+  z-index: 5;
+  pointer-events: none;
+}
+.vsc-pointer svg {
+  width: 20px; height: 20px;
+  fill: #FFFFFF;
+  stroke: #1F1F1F;
+  stroke-width: 1.4px;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,.55));
+}
+
+/* ── Quick input (Ctrl+Alt+Q) ──────────────────────────────────────────────
+   VS Code's own quick input widget, not a DevNotes+ surface: a centred
+   floating panel under the title bar. Colours are Dark Modern workbench
+   values — quickInput.background #222222, widget border #454545,
+   input.background #313131 with the focus border #0078D4, and
+   quickInputList.focusBackground #04395E on the pre-selected row.
+   Only the strings and the item order come from extension.ts. */
+.vsc-quickinput {
+  position: absolute;
+  top: 44px; left: 50%;
+  transform: translateX(-50%);
+  width: 600px; max-width: 76%;
+  z-index: 6;
+  pointer-events: none;
+}
+.qi-step {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  opacity: 0;                     /* the entrance animation reveals these */
+  background: #222222;
+  border: 1px solid #454545;
+  border-radius: 6px;
+  box-shadow: 0 8px 26px rgba(0,0,0,.55);
+  padding: 6px;
+  font-family: var(--vsc-font-ui);
+  color: var(--vsc-fg);
+}
+.qi-field {
+  position: relative;
+  display: flex; align-items: center;
+  height: 26px;
+  padding: 0 6px;
+  background: var(--vsc-input-bg);
+  border: 1px solid var(--vsc-accent);
+  border-radius: 2px;
+  font-size: 13px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+/* On the title step the placeholder is an overlay the typing replaces, so it
+   must not occupy layout or the typed text starts indented behind it. On the
+   two pickers it IS the field content, which is what .on marks. */
+.qi-ph {
+  position: absolute;
+  left: 7px;
+  color: var(--vsc-placeholder);
+}
+.qi-ph.on { position: static; left: auto; }
+/* Typing replaces it rather than running over it. Not .on, which is the
+   pickers' own prompt text and stays for as long as the picker is up. */
+.qi-field.is-typed .qi-ph:not(.on) { opacity: 0; }
+/* The caret is this box's right border, so it rides the reveal edge exactly
+   rather than being positioned against a guessed text width. */
+.qi-typed {
+  width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 1px solid var(--vsc-fg);
+  margin-left: -0.5px;
+}
+.qi-prompt {
+  padding: 5px 7px 3px;
+  font-size: 12px;
+  color: var(--vsc-fg);
+  opacity: .8;
+}
+.qi-list { padding-top: 5px; }
+.qi-row {
+  display: flex; align-items: center; gap: 6px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 3px;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.qi-row.focused { background: #04395E; }
+.qi-ico { width: 16px; height: 16px; flex-shrink: 0; opacity: .9; }
+.qi-label { flex-shrink: 0; }
+.qi-desc {
+  color: var(--vsc-dim);
+  font-size: 12px;
+  overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+
+/* ── Screencast Mode ──────────────────────────────────────────────────────
+   VS Code's own keystroke overlay, from Developer: Toggle Screencast Mode.
+   Every value below is microsoft/vscode
+   src/vs/workbench/browser/actions/media/actions.css (.screencast-keyboard,
+   .screencast-mouse) with the defaults registered in developerActions.ts:
+   verticalOffset 20%, keyboardOverlayTimeout 800ms, mouseIndicatorColor
+   #FF0000, mouseIndicatorSize 20px. The one setting turned down from its
+   default is fontSize — 56px there, and at 1:1 that band would be 98px tall
+   in a 599px window. 28px is inside the setting's own 20–100 range. */
+.screencast-keyboard {
+  position: absolute;
+  bottom: 20%;
+  left: 0;
+  width: 100%;
+  z-index: 7;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: #eee;
+  font-family: var(--vsc-font-ui);
+  font-size: 28px;
+  line-height: 1.75em;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  opacity: 0;   /* .screencast-keyboard:empty — nothing pressed yet */
+}
+.screencast-keyboard > .title { font-weight: 600; }
+.screencast-keyboard > .key {
+  padding: 0 8px;
+  margin-right: 6px;
+  border: 1px solid hsla(0, 0%, 80%, .4);
+  border-radius: 5px;
+  background-color: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 -3px 0 hsla(0, 0%, 73%, .4);
+}
+
+.screencast-mouse {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 20px; height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid #FF0000;
+  border-radius: 50%;
+  z-index: 7;
+  opacity: 0;   /* display: none until mousedown */
+  pointer-events: none;
+}

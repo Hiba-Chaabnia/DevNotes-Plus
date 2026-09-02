@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Mock scenes — DevNotes+ (preview)</title>
+  <link rel="stylesheet" href="assets/vscode-mock.css">
+  <link rel="stylesheet" href="assets/mock-scenes.css">
+  <style>
+    /* Dev harness only. Not shipped copy, not the site's type scale — this
+       page exists to watch scenes and scrub them frame by frame. */
+    :root {
+      --bg-warm: #FAF8F5;
+      --navy-900: #0F172A;
+      --yellow: #FFDE5A;
+      --radius-lg: 12px;
+      --shadow-lg: 0 24px 60px rgba(15, 23, 42, .18);
+      --shadow-glow: 0 0 0 1px rgba(15, 23, 42, .04);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 40px 24px 120px;
+      background: var(--bg-warm);
+      color: var(--navy-900);
+      font: 14px/1.6 ui-sans-serif, system-ui, -apple-system, sans-serif;
+    }
+    .wrap { max-width: 1080px; margin: 0 auto; }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    .lede { margin: 0 0 40px; opacity: .7; max-width: 62ch; }
+    .scene { margin-bottom: 64px; }
+    .scene h2 { font-size: 16px; margin: 0 0 2px; }
+    .scene .note { margin: 0 0 14px; opacity: .65; font-size: 13px; }
+    .controls {
+      display: flex; align-items: center; gap: 12px;
+      margin-top: 14px; padding: 10px 12px;
+      background: #fff; border: 1px solid rgba(15, 23, 42, .1);
+      border-radius: 8px;
+    }
+    .controls button {
+      font: inherit; font-weight: 600;
+      padding: 5px 12px; border-radius: 6px; cursor: pointer;
+      border: 1px solid rgba(15, 23, 42, .15); background: var(--yellow);
+    }
+    .controls button.ghost { background: #fff; }
+    .controls input[type=range] { flex: 1; cursor: pointer; }
+    .controls .t { font-variant-numeric: tabular-nums; opacity: .6; min-width: 68px; text-align: right; }
+    .hero-visual { max-width: 1080px; margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Mock scenes</h1>
+    <p class="lede">
+      Each scene is a data object in <code>assets/mock-scenes-defs.js</code>.
+      They loop on their own; drag a scrubber to step through one. Nothing on
+      this page ships — it exists to write feature copy against.
+    </p>
+
+    <section class="scene">
+      <h2>capture</h2>
+      <p class="note">Ctrl+Alt+Q → title, template, branch scope → the note exists.</p>
+      <div class="hero-visual" data-mock-scene="capture"></div>
+    </section>
+
+    <section class="scene">
+      <h2>anchoring</h2>
+      <p class="note">Four lines land above the anchor; the note goes with it, 5 → 9.</p>
+      <div class="hero-visual" data-mock-scene="anchoring"></div>
+    </section>
+
+    <section class="scene">
+      <h2>branch</h2>
+      <p class="note">Branch switch filters the panel, then the tag bar filters it again.</p>
+      <div class="hero-visual" data-mock-scene="branch"></div>
+    </section>
+
+    <section class="scene">
+      <h2>github</h2>
+      <p class="note">No keybinding exists — the card overflow menu, then a PR URL. The badge tracks the PR state.</p>
+      <div class="hero-visual" data-mock-scene="github"></div>
+    </section>
+
+    <section class="scene">
+      <h2>editor</h2>
+      <p class="note">The block editor opens as its own tab; the document builds a block at a time.</p>
+      <div class="hero-visual" data-mock-scene="editor"></div>
+    </section>
+
+    <section class="scene">
+      <h2>sharing</h2>
+      <p class="note">Share un-ignores the note file, so Source Control shows exactly what to commit.</p>
+      <div class="hero-visual" data-mock-scene="sharing"></div>
+    </section>
+
+    <section class="scene">
+      <h2>mcp</h2>
+      <p class="note">Claude Code in the panel, reading and writing the notes over the MCP server.</p>
+      <div class="hero-visual" data-mock-scene="mcp"></div>
+    </section>
+  </div>
+
+  <script src="assets/mock-icons.js" defer></script>
+  <script src="assets/vscode-mock.js" defer></script>
+  <script src="assets/mock-surfaces.js" defer></script>
+  <script src="assets/mock-scenes.js" defer></script>
+  <script src="assets/mock-scenes-defs.js" defer></script>
+  <script defer>
+    window.addEventListener('DOMContentLoaded', function () {
+      // observe:false — the harness drives playback itself so a scrub is not
+      // fought by the scroll observer.
+      MockScenes.mountAll({ observe: false }).then(function (scenes) {
+        scenes.forEach(function (scene) {
+          var host = scene.host;
+          var bar = document.createElement('div');
+          bar.className = 'controls';
+
+          var play = document.createElement('button');
+          var stop = document.createElement('button');
+          stop.className = 'ghost';
+          stop.textContent = 'Reset';
+
+          var range = document.createElement('input');
+          range.type = 'range';
+          range.min = 0;
+          range.max = scene.duration();
+          range.step = 10;
+          range.value = 0;
+
+          var read = document.createElement('span');
+          read.className = 't';
+
+          function label() {
+            play.textContent = scene.playing ? 'Pause' : 'Play';
+            read.textContent = (range.value / 1000).toFixed(2) + 's / '
+                             + (scene.duration() / 1000).toFixed(2) + 's';
+          }
+
+          play.addEventListener('click', function () {
+            if (scene.playing) { scene.stop(); }
+            else { scene.def.loop = false; scene.play(); tick(); }
+            label();
+          });
+          stop.addEventListener('click', function () {
+            scene.stop().reset();
+            range.value = 0;
+            label();
+          });
+          range.addEventListener('input', function () {
+            scene.stop();
+            scene.seek(parseInt(range.value, 10));
+            label();
+          });
+
+          // While playing, the scrubber follows rather than drives.
+          var t0 = 0;
+          function tick() {
+            if (!scene.playing) { label(); return; }
+            if (!t0) { t0 = performance.now(); }
+            var t = performance.now() - t0;
+            if (t > scene.duration()) { t0 = 0; scene.playing = false; label(); return; }
+            range.value = t;
+            label();
+            requestAnimationFrame(tick);
+          }
+
+          bar.appendChild(play);
+          bar.appendChild(stop);
+          bar.appendChild(range);
+          bar.appendChild(read);
+          host.parentNode.appendChild(bar);
+          label();
+        });
+      });
+    });
+  </script>
+</body>
+</html>

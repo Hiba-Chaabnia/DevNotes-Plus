@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# Scene preview harness, not part of the site
+Disallow: /scenes.html
+
+Sitemap: https://hiba-chaabnia.github.io/DevNotes-Plus/sitemap.xml

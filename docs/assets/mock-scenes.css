@@ -1,0 +1,412 @@
+/* DevNotes+ — mock scene states.
+
+   Every rule here is scoped to .mock-scene, which only a runner-instantiated
+   clone carries. The hero mock in index.html is untouched by this file, and
+   its entrance stays where it is.
+
+   The runner sets classes and nothing else; all timing below is CSS, so a
+   scene's feel is tuned here and its choreography in the scene object. */
+
+.mock-scene {
+  /* the overlays are reparented to the root, so the root has to be the
+     containing block for them */
+  position: relative;
+}
+
+/* ── panel ─────────────────────────────────────────────────────────────── */
+.mock-scene .vsc-body {
+  transition: grid-template-columns .5s cubic-bezier(.16, 1, .3, 1);
+}
+.mock-scene.s-panel-closed .vsc-body {
+  grid-template-columns: var(--vsc-act-w) 0px 1fr;
+}
+
+/* ── pointer ───────────────────────────────────────────────────────────── */
+/* Positioned by the runner as a translate from the window's top-left, so the
+   travel is a transform transition and the target is measured, not guessed. */
+.mock-scene .vsc-pointer {
+  display: block;
+  left: 0;
+  top: 0;
+  margin: -2px 0 0 -2px;
+  opacity: 0;
+  /* Above every surface a scene can raise. The authored z-index is 5, which
+     puts it under the quick input (6) and the overflow menu (9) — the pointer
+     then vanishes at exactly the moment it is clicking something. */
+  z-index: 21;
+  transition: transform .55s cubic-bezier(.33, .8, .3, 1), opacity .18s linear;
+}
+.mock-scene.s-pointer .vsc-pointer { opacity: 1; }
+/* scale, not transform, so the press cannot clobber the travel translate */
+.mock-scene .vsc-pointer svg {
+  transform-origin: 4px 3px;
+  transition: scale .09s ease-out;
+}
+.mock-scene.s-press .vsc-pointer svg { scale: .76; }
+
+.mock-scene .screencast-mouse {
+  /* the authored rule pins this at 50%/50% of the activity item it lived in;
+     the runner drives it by transform from the window origin, like the
+     pointer, so the offset has to go or the ring lands mid-window */
+  left: 0;
+  top: 0;
+  margin: -10px 0 0 -10px;
+  z-index: 20;   /* just under the cursor it is drawn around */
+  transition: transform .55s cubic-bezier(.33, .8, .3, 1);
+}
+.mock-scene.s-press .screencast-mouse { opacity: 1; }
+
+/* ── screencast overlay ────────────────────────────────────────────────── */
+/* The keystroke overlay is above the workbench in VS Code too, so it must
+   clear the menu and the quick input rather than sit under them. */
+.mock-scene .screencast-keyboard { z-index: 19; transition: opacity .12s linear; }
+.mock-scene .screencast-keyboard.is-on { opacity: 1; }
+
+/* ── quick input ───────────────────────────────────────────────────────── */
+.mock-scene .qi-step {
+  transform: translateY(-6px);
+  transition: opacity .16s ease-out, transform .16s ease-out;
+}
+.mock-scene .qi-step.is-on { opacity: 1; transform: none; }
+
+/* ── sidebar cards ─────────────────────────────────────────────────────── */
+.mock-scene .sb-card.is-hidden,
+.mock-scene .sb-card.is-filtered { display: none; }
+
+@keyframes sceneCardIn {
+  from { opacity: 0; transform: translateY(-14px); }
+  to   { opacity: 1; transform: none; }
+}
+.mock-scene .sb-card.is-arriving {
+  animation: sceneCardIn .55s cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.mock-scene .sb-empty { display: flex; opacity: 0; transition: opacity .35s ease-out; }
+.mock-scene.s-empty .sb-empty { opacity: 1; }
+
+/* The chip the tag filter is currently on. .all is the authored default, so
+   it gives up its styling once the runner is driving the bar. */
+.mock-scene .sb-chip.is-on { outline: 1px solid var(--vsc-accent); outline-offset: -1px; }
+
+/* ── editor ────────────────────────────────────────────────────────────── */
+.mock-scene .vsc-line { transition: background-color .4s ease-out; }
+
+@keyframes scenePinPop {
+  0%   { opacity: 0; transform: scale(.2); }
+  60%  { opacity: 1; transform: scale(1.45); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.mock-scene .vsc-line.is-pinning .vsc-gutter {
+  animation: scenePinPop .5s cubic-bezier(.34, 1.56, .64, 1) both;
+}
+
+/* ── status bar ────────────────────────────────────────────────────────── */
+.mock-scene .vsc-status-notes { transition: opacity .3s ease-out; }
+.mock-scene .vsc-status-notes.is-off { opacity: 0; }
+
+/* ══ Extra surfaces ═══════════════════════════════════════════════════════
+   Markup for these is built in assets/mock-surfaces.js. Values below are the
+   extension's own (EditorPanel.ts) or, where marked, VS Code Dark Modern
+   workbench values rather than anything DevNotes+ chooses. */
+
+/* ── card chips ───────────────────────────────────────────────────────────
+   .meta-chip in SidebarView.ts. The three status colours are GH_COLORS in
+   src/utils/colors.ts; the shared and conflict colours are UI_COLORS.shared
+   and .danger. */
+.mock-scene .sb-ghbadge { text-transform: lowercase; }
+.mock-scene .sb-ghbadge.gh-open   { background: rgba(6, 214, 160, .18);   border-color: #06d6a0; color: #06d6a0; }
+.mock-scene .sb-ghbadge.gh-closed { background: rgba(136, 136, 136, .18); border-color: #888888; color: #888888; }
+.mock-scene .sb-ghbadge.gh-merged { background: rgba(130, 80, 223, .18);  border-color: #8250df; color: #8250df; }
+.mock-scene .sb-sharedbadge   { background: rgba(123, 97, 255, .18); border-color: #7b61ff; color: #7b61ff; }
+.mock-scene .sb-conflictbadge { background: rgba(255, 82, 77, .2);   border-color: #FF524D; color: #FF524D; }
+
+@keyframes sceneChipIn {
+  from { opacity: 0; transform: scale(.8); }
+  to   { opacity: 1; transform: none; }
+}
+.mock-scene .sb-tagpill.is-arriving { animation: sceneChipIn .32s cubic-bezier(.34, 1.56, .64, 1) both; }
+
+/* ── block editor ─────────────────────────────────────────────────────────
+   EditorPanel.ts. It is a webview tab in the editor group, so it covers the
+   code pane rather than sitting beside it. */
+.mock-scene .vsc-editor { position: relative; }
+.mock-scene .ed-panel {
+  position: absolute;
+  inset: 35px 0 0;            /* under .vsc-tabs */
+  display: none;
+  flex-direction: column;
+  background: var(--vsc-editor);
+  z-index: 2;
+}
+.mock-scene.s-editor .ed-panel { display: flex; }
+.mock-scene.s-editor .vsc-breadcrumb,
+.mock-scene.s-editor .vsc-code { visibility: hidden; }
+.mock-scene .vsc-tab .nb { color: #519ABA; }  /* .md file icon */
+
+.mock-scene .ed-title {
+  display: block; width: 100%;
+  background: transparent; border: none; outline: none;
+  border-bottom: 1px solid transparent;
+  font-size: 1.55em; font-weight: 700;
+  color: var(--vsc-fg);
+  padding: 18px min(10%, 80px) 10px;
+  font-family: var(--vsc-font-ui);
+  flex-shrink: 0;
+}
+.mock-scene .ed-toolbar {
+  display: flex; align-items: center; gap: 2px;
+  padding: 5px min(10%, 80px);
+  border-bottom: 1px solid var(--vsc-border);
+  background: var(--vsc-chrome);
+  flex-shrink: 0;
+}
+.mock-scene .tb-btn {
+  background: none; border: none; border-radius: 4px;
+  padding: 3px 7px; min-width: 26px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--vsc-fg); opacity: .72;
+  transition: background .1s, opacity .1s;
+}
+.mock-scene .tb-btn.is-active {
+  background: var(--vsc-accent); color: #FFFFFF; opacity: 1;
+}
+.mock-scene .tb-sep { width: 1px; height: 16px; background: var(--vsc-border); margin: 0 3px; }
+.mock-scene .tb-spacer { flex: 1; }
+
+.mock-scene .ed-mount { flex: 1; overflow-y: auto; scroll-behavior: smooth; padding: 14px min(10%, 80px) 28px; }
+.mock-scene .ed-doc {
+  line-height: 1.72; font-size: 14px; max-width: 760px; margin: 0 auto;
+  font-family: var(--vsc-font-ui);
+}
+.mock-scene .ed-doc p { margin-bottom: .75em; }
+.mock-scene .ed-doc h2 { font-size: 1.30em; font-weight: 700; margin: .9em 0 .35em; }
+.mock-scene .ed-doc code {
+  font-family: var(--vsc-font-code); font-size: .875em;
+  background: rgba(128, 128, 128, .15); padding: 1px 5px; border-radius: 3px;
+}
+.mock-scene .ed-doc pre {
+  background: rgba(128, 128, 128, .15); border-radius: 6px;
+  padding: 12px 16px; margin-bottom: .75em;
+  font-family: var(--vsc-font-code); font-size: 12px; line-height: 1.5;
+  white-space: pre; overflow-x: auto;
+}
+.mock-scene .ed-doc pre code { background: none; padding: 0; }
+.mock-scene .ed-doc ul[data-type="taskList"] { list-style: none; padding-left: 0; margin-bottom: .75em; }
+.mock-scene .ed-doc ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 8px; margin: 2px 0; }
+.mock-scene .ed-doc ul[data-type="taskList"] input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none;
+  width: 13px; height: 13px; flex-shrink: 0; margin-top: 5px;
+  background: transparent; border: 1.5px solid var(--vsc-fg); border-radius: 2px;
+}
+.mock-scene .ed-doc ul[data-type="taskList"] input[type="checkbox"]:checked {
+  background: var(--vsc-accent); border-color: var(--vsc-accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: center;
+}
+.mock-scene .ed-doc ul[data-type="taskList"] li[data-checked="true"] > div {
+  text-decoration: line-through; opacity: .5;
+}
+.mock-scene .ed-doc table { border-collapse: collapse; margin-bottom: .75em; font-size: 13px; }
+.mock-scene .ed-doc th, .mock-scene .ed-doc td {
+  border: 1px solid var(--vsc-border); padding: 4px 10px; text-align: left;
+}
+.mock-scene .ed-doc th { background: rgba(128, 128, 128, .12); font-weight: 700; }
+
+@keyframes sceneBlockIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.mock-scene .ed-doc > .is-arriving { animation: sceneBlockIn .3s ease-out both; }
+
+/* ── panel (VS Code's own) ────────────────────────────────────────────── */
+.mock-scene .vsc-panel {
+  position: absolute; left: 0; right: 0; bottom: 22px;   /* above the status bar */
+  height: 46%;
+  display: none;
+  flex-direction: column;
+  background: var(--vsc-editor);
+  border-top: 1px solid var(--vsc-border);
+  z-index: 3;
+}
+.mock-scene.s-terminal .vsc-panel { display: flex; }
+.mock-scene .panel-tabs {
+  display: flex; gap: 16px; padding: 0 14px;
+  border-bottom: 1px solid var(--vsc-border); flex-shrink: 0;
+}
+.mock-scene .panel-tab {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+  padding: 7px 0; color: var(--vsc-faint); border-bottom: 1px solid transparent;
+}
+.mock-scene .panel-tab.active { color: var(--vsc-fg); border-bottom-color: var(--vsc-fg); }
+.mock-scene .panel-body { flex: 1; overflow: hidden; padding: 8px 14px; }
+.mock-scene .term { font-family: var(--vsc-font-code); font-size: 12px; line-height: 1.65; }
+.mock-scene .term-line { white-space: pre-wrap; }
+.mock-scene .term-line.dim  { color: var(--vsc-faint); }
+.mock-scene .term-line.you  { color: var(--vsc-fg); }
+.mock-scene .term-line.tool { color: var(--note-yellow); }
+.mock-scene .term-line.ok   { color: #06d6a0; }
+
+/* ── source control (VS Code's own) ───────────────────────────────────────
+   Decoration colours are the workbench gitDecoration.* Dark Modern values. */
+.mock-scene .scm-view {
+  display: none;
+  flex-direction: column;
+  background: var(--vsc-chrome);
+  border-right: 1px solid var(--vsc-border);
+  overflow: hidden; min-width: 0;
+}
+.mock-scene.s-scm .scm-view { display: flex; }
+.mock-scene.s-scm .vsc-sidebar { display: none; }
+.mock-scene .scm-input {
+  margin: 4px 12px 8px;
+  padding: 4px 7px; min-height: 26px;
+  background: var(--vsc-input-bg);
+  border: 1px solid var(--vsc-input-border);
+  border-radius: 2px;
+  font-size: 12px; color: var(--vsc-placeholder);
+}
+.mock-scene .scm-input::before { content: attr(data-placeholder); }
+.mock-scene .scm-commit {
+  margin: 0 12px 10px; padding: 4px 0;
+  background: var(--vsc-accent); color: #FFFFFF;
+  border: none; border-radius: 2px;
+  font-family: var(--vsc-font-ui); font-size: 12px; font-weight: 600;
+}
+.mock-scene .scm-group {
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 12px 4px 8px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--vsc-fg);
+}
+.mock-scene .scm-group .chev { display: flex; }
+.mock-scene .scm-group .chev svg { width: 16px; height: 16px; }
+.mock-scene .scm-group .spacer { flex: 1; }
+.mock-scene .scm-count {
+  background: var(--vsc-badge); color: #FFFFFF;
+  border-radius: 9px; padding: 0 6px; font-size: 10px; font-weight: 600;
+}
+.mock-scene .scm-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 2px 12px 2px 26px; font-size: 13px;
+  animation: sceneBlockIn .3s ease-out both;
+}
+.mock-scene .scm-file { color: var(--vsc-fg); }
+.mock-scene .scm-dir { color: var(--vsc-faint); font-size: 11px; flex: 1; }
+.mock-scene .scm-status { font-size: 11px; font-weight: 700; }
+.mock-scene .scm-row.s-modified  .scm-file, .mock-scene .scm-row.s-modified  .scm-status { color: #E2C08D; }
+.mock-scene .scm-row.s-untracked .scm-file, .mock-scene .scm-row.s-untracked .scm-status { color: #73C991; }
+.mock-scene .scm-row.s-added     .scm-file, .mock-scene .scm-row.s-added     .scm-status { color: #73C991; }
+.mock-scene .scm-row.s-deleted   .scm-file, .mock-scene .scm-row.s-deleted   .scm-status { color: #C74E39; }
+
+/* ── card overflow menu (SidebarView.ts .card-overflow-btn / .ovf-item) ── */
+.mock-scene .sb-card { position: relative; }
+.mock-scene .card-overflow-btn {
+  background: none; border: none; padding: 0 2px;
+  color: var(--vsc-fg); opacity: 0;
+  border-radius: 4px; display: flex; flex-shrink: 0;
+  transition: opacity .12s;
+}
+/* Hidden until the card is hovered, then half-strength, then full while its
+   menu is open — SidebarView.ts:1419-1433. The pointer drives .is-hover,
+   because a decorative cursor never fires :hover. */
+.mock-scene .sb-card.is-hover .card-overflow-btn { opacity: .5; }
+/* these two must out-specify the .is-hover rule above, not just follow it */
+.mock-scene .sb-card .card-overflow-btn.is-hover,
+.mock-scene .sb-card .card-overflow-btn.open {
+  opacity: 1;
+  background: rgba(128, 128, 128, .15);
+}
+.mock-scene .ovf-menu {
+  position: absolute; z-index: 9;
+  min-width: 200px; padding: 4px;
+  overflow-y: auto;
+  background: #1F1F1F;                 /* --vscode-menu-background */
+  border: 1px solid #454545;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .35);
+  animation: sceneBlockIn .16s ease-out both;
+}
+.mock-scene .ovf-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; width: 100%;
+  border: none; background: none; border-radius: 5px;
+  color: var(--vsc-fg); font-size: 12px; font-family: var(--vsc-font-ui);
+  text-align: left;
+}
+.mock-scene .ovf-item.is-focus { background: rgba(255, 255, 255, .09); }
+.mock-scene .ovf-icon { flex-shrink: 0; width: 16px; display: flex; align-items: center; justify-content: center; opacity: .75; }
+.mock-scene .ovf-label { flex: 1; }
+.mock-scene .ovf-divider { border: none; border-top: 1px solid var(--vsc-border); margin: 4px 0; }
+.mock-scene .ovf-item.danger { color: #FF524D; }   /* UI_COLORS.danger */
+
+/* A clamped menu scrolls, and the default scrollbar is invisible on this
+   ground. Same treatment .sb-cards gets: scrollbarSlider.background over a
+   transparent track. */
+.mock-scene .ovf-menu { scrollbar-width: thin; scrollbar-color: rgba(121, 121, 121, .4) transparent; }
+.mock-scene .ovf-menu::-webkit-scrollbar { width: 10px; }
+.mock-scene .ovf-menu::-webkit-scrollbar-track { background: transparent; }
+.mock-scene .ovf-menu::-webkit-scrollbar-thumb { background: rgba(121, 121, 121, .4); }
+.mock-scene .ovf-menu::-webkit-scrollbar-thumb:hover { background: rgba(100, 100, 100, .7); }
+
+/* Below 768px .vsc-body collapses to a single track and the activity bar and
+   editor are hidden, so there is nothing to point at and nowhere for the
+   quick input to sit. */
+@media (max-width: 768px) {
+  .mock-scene .vsc-body { transition: none; }
+  .mock-scene .vsc-pointer,
+  .mock-scene .screencast-mouse,
+  .mock-scene .screencast-keyboard,
+  .mock-scene .vsc-quickinput { display: none !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mock-scene *,
+  .mock-scene *::before,
+  .mock-scene *::after { animation: none !important; transition: none !important; }
+  .mock-scene .vsc-pointer,
+  .mock-scene .screencast-mouse,
+  .mock-scene .screencast-keyboard,
+  .mock-scene .vsc-quickinput { display: none !important; }
+}
+
+/* ── markdown in the editor ──────────────────────────────────────────────
+   The feature copy is a file open in the editor, so it is tokenised the way
+   VS Code's Dark+ tokenises markdown rather than styled as web copy. */
+.mock-scene .vsc-code.md .vsc-linecode { font-family: var(--vsc-font-ui); }
+.mock-scene .m-h  { color: #569CD6; font-weight: 700; }
+.mock-scene .m-p  { color: #D4D4D4; }
+.mock-scene .m-b  { color: #CCCCCC; font-weight: 700; }
+.mock-scene .m-li { color: #6796E6; }
+.mock-scene .m-code {
+  color: #CE9178;
+  font-family: var(--vsc-font-code);
+  font-size: .92em;
+}
+
+/* Each line resolves out of a blur as its file opens — the transition between
+   two features is the copy itself arriving, top to bottom. Only markdown does
+   this: re-rendering a code sample mid-scene should not re-animate it. */
+@keyframes mdLineIn {
+  from { opacity: 0; filter: blur(7px); transform: translateY(4px); }
+  to   { opacity: 1; filter: blur(0);   transform: none; }
+}
+.mock-scene .vsc-code.md .vsc-line {
+  animation: mdLineIn .42s cubic-bezier(.16, 1, .3, 1) both;
+}
+.mock-scene .vsc-code.md .vsc-line:nth-child(1)  { animation-delay: 0ms; }
+.mock-scene .vsc-code.md .vsc-line:nth-child(2)  { animation-delay: 26ms; }
+.mock-scene .vsc-code.md .vsc-line:nth-child(3)  { animation-delay: 52ms; }
+.mock-scene .vsc-code.md .vsc-line:nth-child(4)  { animation-delay: 78ms; }
+.mock-scene .vsc-code.md .vsc-line:nth-child(5)  { animation-delay: 104ms; }
+.mock-scene .vsc-code.md .vsc-line:nth-child(6)  { animation-delay: 130ms; }
+.mock-scene .vsc-code.md .vsc-line:nth-child(7)  { animation-delay: 156ms; }
+.mock-scene .vsc-code.md .vsc-line:nth-child(8)  { animation-delay: 182ms; }
+.mock-scene .vsc-code.md .vsc-line:nth-child(9)  { animation-delay: 208ms; }
+.mock-scene .vsc-code.md .vsc-line:nth-child(10) { animation-delay: 234ms; }
+.mock-scene .vsc-code.md .vsc-line:nth-child(11) { animation-delay: 260ms; }
+.mock-scene .vsc-code.md .vsc-line:nth-child(12) { animation-delay: 286ms; }
+.mock-scene .vsc-code.md .vsc-line:nth-child(n+13) { animation-delay: 312ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mock-scene .vsc-code.md .vsc-line { animation: none; }
+}
