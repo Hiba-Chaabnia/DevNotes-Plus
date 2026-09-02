@@ -67,8 +67,19 @@ setDevnotesDir(DEVNOTES_DIR);
 
 // ─── Server ───────────────────────────────────────────────────────────────────
 
+/** Read from the shipped package.json so the reported version can't drift from the package. */
+function serverVersion(): string {
+  try {
+    return JSON.parse(
+      fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8')
+    ).version;
+  } catch {
+    return '0.0.0';
+  }
+}
+
 const server = new Server(
-  { name: 'devnotes', version: '1.0.0' },
+  { name: 'devnotes', version: serverVersion() },
   {
     capabilities: {
       tools    : {},
