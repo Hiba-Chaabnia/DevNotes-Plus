@@ -5,16 +5,61 @@
   "version": "0.1.2",
   "icon": "media/icon.png",
   "publisher": "HibaChaabnia",
+  "author": "Hiba Chaabnia",
   "license": "AGPL-3.0",
+  "homepage": "https://hiba-chaabnia.github.io/DevNotes-Plus/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Hiba-Chaabnia/DevNotes-Plus"
+    "url": "https://github.com/Hiba-Chaabnia/DevNotes-Plus.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Hiba-Chaabnia/DevNotes-Plus/issues"
+  },
+  "qna": "https://github.com/Hiba-Chaabnia/DevNotes-Plus/issues",
+  "pricing": "Free",
+  "galleryBanner": {
+    "color": "#0d1117",
+    "theme": "dark"
   },
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "AI"
+  ],
+  "keywords": [
+    "notes",
+    "note-taking",
+    "devnotes",
+    "developer notes",
+    "annotations",
+    "code annotations",
+    "comments",
+    "documentation",
+    "markdown",
+    "sticky notes",
+    "scratchpad",
+    "todo",
+    "code links",
+    "file links",
+    "line links",
+    "git",
+    "branch",
+    "branch scoped",
+    "mcp",
+    "mcp server",
+    "claude",
+    "claude code",
+    "ai",
+    "model context protocol",
+    "github",
+    "pull request",
+    "issues",
+    "team",
+    "knowledge base",
+    "rich text",
+    "wysiwyg"
   ],
   "activationEvents": [
     "onStartupFinished"
@@ -142,6 +187,7 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.85.0",
+    "@vscode/codicons": "^0.0.46-24",
     "esbuild": "^0.27.4",
     "typescript": "^5.3.0"
   },
