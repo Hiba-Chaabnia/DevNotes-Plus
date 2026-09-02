@@ -4,10 +4,12 @@
 src/**
 test/**
 docs/**
+guide-src/**
 drafts/**
 .github/**
 mcp-server/**
 !mcp-server/dist/index.js
+!mcp-server/package.json
 .gitignore
 .eslintrc.json
 **/*.map
