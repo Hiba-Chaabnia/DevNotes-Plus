@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Share Code Notes with Your Team over Git — DevNotes+</title>
+  <meta name="description" content="DevNotes+ notes are private by default. Share individual notes through git with a per-note opt-in, keep one tag set across the team, and resolve merge conflicts in notes.">
+  <link rel="canonical" href="https://hiba-chaabnia.github.io/DevNotes-Plus/guide/team-sharing.html">
+  <meta name="author" content="Hiba Chaabnia">
+  <meta name="theme-color" content="#0F172A">
+
+  <link rel="icon" type="image/png" href="../assets/icon.png">
+  <link rel="apple-touch-icon" href="../assets/icon.png">
+
+  <meta property="og:site_name" content="DevNotes+">
+  <meta property="og:title" content="Share Code Notes with Your Team over Git — DevNotes+">
+  <meta property="og:description" content="DevNotes+ notes are private by default. Share individual notes through git with a per-note opt-in, keep one tag set across the team, and resolve merge conflicts in notes.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://hiba-chaabnia.github.io/DevNotes-Plus/guide/team-sharing.html">
+  <meta property="og:image" content="https://hiba-chaabnia.github.io/DevNotes-Plus/assets/icon.png">
+  <meta property="og:image:alt" content="The DevNotes+ icon">
+  <meta property="og:locale" content="en_US">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Share Code Notes with Your Team over Git — DevNotes+">
+  <meta name="twitter:description" content="DevNotes+ notes are private by default. Share individual notes through git with a per-note opt-in, keep one tag set across the team, and resolve merge conflicts in notes.">
+  <meta name="twitter:image" content="https://hiba-chaabnia.github.io/DevNotes-Plus/assets/icon.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/guide.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "TechArticle",
+        "headline": "Share Code Notes with Your Team over Git",
+        "description": "DevNotes+ notes are private by default. Share individual notes through git with a per-note opt-in, keep one tag set across the team, and resolve merge conflicts in notes.",
+        "url": "https://hiba-chaabnia.github.io/DevNotes-Plus/guide/team-sharing.html",
+        "inLanguage": "en",
+        "dateModified": "2026-09-02",
+        "author": { "@type": "Person", "name": "Hiba Chaabnia" },
+        "publisher": { "@type": "Person", "name": "Hiba Chaabnia" },
+        "about": {
+          "@type": "SoftwareApplication",
+          "name": "DevNotes+",
+          "applicationCategory": "DeveloperApplication",
+          "operatingSystem": "Windows, macOS, Linux"
+        },
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "DevNotes+",
+          "url": "https://hiba-chaabnia.github.io/DevNotes-Plus/"
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "DevNotes+", "item": "https://hiba-chaabnia.github.io/DevNotes-Plus/" },
+          { "@type": "ListItem", "position": 2, "name": "Guide", "item": "https://hiba-chaabnia.github.io/DevNotes-Plus/guide/" },
+          { "@type": "ListItem", "position": 3, "name": "Share Code Notes with Your Team over Git", "item": "https://hiba-chaabnia.github.io/DevNotes-Plus/guide/team-sharing.html" }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+<header class="navbar">
+  <div class="container nav-container">
+    <a class="nav-logo" href="../">
+      <img class="logo-badge" src="../assets/icon.png" alt="">
+      DevNotes+
+    </a>
+    <nav class="nav-links">
+      <a class="nav-link" href="../#features">Features</a>
+      <a class="nav-link current" href="./">Guide</a>
+      <a class="nav-link" href="../#feedback">Feedback</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="btn btn-ghost" href="https://github.com/Hiba-Chaabnia/DevNotes-Plus"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.2 1.9 1.2 1.1 1.9 2.9 1.3 3.6 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.6 4.9 18.6 5.2 18.6 5.2c.7 1.7.3 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3"/></svg><span>View on GitHub</span></a>
+      <a class="btn btn-primary" href="https://marketplace.visualstudio.com/items?itemName=HibaChaabnia.devnotes-plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Install for VS Code</span></a>
+    </div>
+  </div>
+</header>
+
+<main class="container guide-shell">
+  <aside class="guide-sidebar">
+    <p class="sb-heading">User guide</p>
+    <ol>
+      <li><a href="./">Overview</a></li>
+      <li><a href="getting-started.html">Getting started</a></li>
+      <li><a href="anchoring-notes-to-code.html">Anchoring notes to code</a></li>
+      <li><a href="organizing-notes.html">Organizing notes</a></li>
+      <li><a href="claude-code-mcp.html">Claude Code & MCP</a></li>
+      <li><a href="team-sharing.html" aria-current="page">Sharing with your team</a></li>
+      <li><a href="file-format.html">File format & storage</a></li>
+    </ol>
+  </aside>
+
+  <article class="guide-body">
+    <p class="breadcrumb"><a href="../">DevNotes+</a><span>/</span><a href="./">Guide</a><span>/</span>Sharing notes with your team</p>
+    <h1>Sharing notes with your team</h1>
+    <p class="guide-lede">Notes are private until you say otherwise. Sharing one puts it through git like any other file in the repo — reviewable in a diff, visible in a PR, and merged the same way.</p>
+<h2>Private by default</h2>
+
+    <p>The first time DevNotes+ creates <code>.devnotes/</code> in a project, it writes a <code>.gitignore</code> inside it containing a single line:</p>
+
+<pre><code>*</code></pre>
+
+    <p>Everything in the folder is ignored. You can write whatever you like — half-formed ideas, complaints about the code, notes on a bug you have not reproduced yet — and none of it reaches the repository.</p>
+
+    <div class="callout callout-note">
+      <span class="callout-label">Worth checking once</span>
+      <p>If your project already has a rule that force-adds files, or a global gitignore that behaves unusually, confirm with <code>git status</code> after your first note that <code>.devnotes/</code> is genuinely untracked. It takes ten seconds and the alternative is committing your private notes.</p>
+    </div>
+
+    <h2>Sharing one note</h2>
+
+    <p>Open a note's overflow menu and toggle <strong>Share this note</strong>.</p>
+
+    <p>DevNotes+ then adds a negated entry to <code>.devnotes/.gitignore</code> that un-ignores that one file. Any images the note references are un-ignored too, so the note arrives at your teammate complete rather than with broken image links. The first time you share anything, <code>.gitignore</code> and <code>tags.json</code> are un-ignored as well — the team needs both for sharing to work at all.</p>
+
+    <p>The result is an ordinary Markdown file, staged and committed like any other change:</p>
+
+<pre><code>git add .devnotes
+git commit -m <span class="s">"notes: document the retry floor"</span></code></pre>
+
+    <p>Un-sharing is the same toggle in reverse. Note that this stops <em>future</em> changes from being tracked — a note you have already committed stays in the repository's history until you remove it there, exactly like any other file.</p>
+
+    <div class="callout callout-tip">
+      <span class="callout-label">A reasonable habit</span>
+      <p>Share the notes that answer &ldquo;why is this like this?&rdquo; — the ones a reviewer or a future maintainer would otherwise have to ask about. Keep working notes and reminders to yourself. The value of a shared note collection drops fast when it fills up with other people's todo lists.</p>
+    </div>
+
+    <h2>One tag set for the team</h2>
+
+    <p><code>.devnotes/tags.json</code> holds your tag definitions — labels, colours, icons and order — and it is committed as soon as anyone shares a note. That means a repo has one tag vocabulary rather than one per developer, and a note tagged <strong>Bug</strong> means the same thing wherever it is read.</p>
+
+    <p>Because it is a tracked file, changing tags is a change your team reviews. Renaming a tag or changing its colour turns up in the diff like anything else.</p>
+
+    <h2>Seeing what changed</h2>
+
+    <p>The <strong>Activity</strong> section of the sidebar lists recent note changes with an author and a timestamp, marking whether each was created or updated. Three kinds of author show up: you, your teammates, and Claude Code, which is labelled distinctly so you can tell machine-written notes from human ones.</p>
+
+    <p>Ownership comes from your git user name, so activity attribution needs git configured — <code>git config user.name</code> — and works best when everyone on the team has done the same.</p>
+
+    <p>The section only appears once there is activity to show.</p>
+
+    <h2>When two people edit the same note</h2>
+
+    <p>A shared note is a text file, so git handles it like a text file: if two people change the same note and the changes cannot be merged automatically, you get a conflicted file with <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code> markers in it.</p>
+
+    <p>DevNotes+ detects those markers and flags the note as conflicted rather than showing you a broken card. Opening it brings up a conflict panel that renders both versions side by side — yours and the incoming one, each labelled with the branch or commit it came from — with three ways out:</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Choice</th><th>Result</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Keep mine</td><td>Your version wins; the incoming one is discarded.</td></tr>
+          <tr><td>Keep theirs</td><td>The incoming version wins; yours is discarded.</td></tr>
+          <tr><td>Merge versions</td><td>Opens an editor where you assemble one note from both, then saves that.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Resolving through the panel rewrites the file cleanly, without conflict markers. You still need to stage and commit the result, the same as any other conflict resolution.</p>
+
+    <h2>Pulling in a teammate's notes</h2>
+
+    <p>Nothing special is required. Shared notes arrive with <code>git pull</code> like any other file, and DevNotes+ watches <code>.devnotes/</code> for changes made outside the extension — so the sidebar updates on its own once the pull lands. If it looks stale, run <strong>DevNotes: Refresh</strong>.</p>
+
+    <h2>Working without git</h2>
+
+    <p>DevNotes+ does not require a git repository. Without one you lose sharing, note ownership, activity attribution, branch scoping and <code>note_history</code>. Everything else — notes, code links, tags, reminders, templates, export, the <a href="claude-code-mcp.html">MCP integration</a> — works exactly the same.</p>
+    <nav class="next-nav">
+      <a href="claude-code-mcp.html"><span class="dir">Previous</span><span class="t">Claude Code & MCP</span></a>
+      <a href="file-format.html"><span class="dir">Next</span><span class="t">File format & storage</span></a>
+    </nav>
+  </article>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <img class="logo-badge" src="../assets/icon.png" alt="">
+        DevNotes+
+      </div>
+      <nav class="footer-links">
+        <a href="../">Home</a>
+        <a href="./">Guide</a>
+        <a href="https://marketplace.visualstudio.com/items?itemName=HibaChaabnia.devnotes-plus">VS Code Marketplace</a>
+        <a href="https://open-vsx.org/extension/HibaChaabnia/devnotes-plus">Open VSX</a>
+        <a href="https://github.com/Hiba-Chaabnia/DevNotes-Plus">GitHub</a>
+        <a href="https://github.com/Hiba-Chaabnia/DevNotes-Plus/issues">Report an issue</a>
+      </nav>
+    </div>
+    <p class="footer-legal">
+      DevNotes+ is free and open source under the AGPL-3.0 licence. Built by Hiba Chaabnia.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>

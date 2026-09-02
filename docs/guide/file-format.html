@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The .devnotes File Format — DevNotes+</title>
+  <meta name="description" content="DevNotes+ stores every note as a Markdown file with YAML frontmatter in .devnotes/. Full field reference, folder layout, and how to read or edit notes without the extension.">
+  <link rel="canonical" href="https://hiba-chaabnia.github.io/DevNotes-Plus/guide/file-format.html">
+  <meta name="author" content="Hiba Chaabnia">
+  <meta name="theme-color" content="#0F172A">
+
+  <link rel="icon" type="image/png" href="../assets/icon.png">
+  <link rel="apple-touch-icon" href="../assets/icon.png">
+
+  <meta property="og:site_name" content="DevNotes+">
+  <meta property="og:title" content="The .devnotes File Format — DevNotes+">
+  <meta property="og:description" content="DevNotes+ stores every note as a Markdown file with YAML frontmatter in .devnotes/. Full field reference, folder layout, and how to read or edit notes without the extension.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://hiba-chaabnia.github.io/DevNotes-Plus/guide/file-format.html">
+  <meta property="og:image" content="https://hiba-chaabnia.github.io/DevNotes-Plus/assets/icon.png">
+  <meta property="og:image:alt" content="The DevNotes+ icon">
+  <meta property="og:locale" content="en_US">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="The .devnotes File Format — DevNotes+">
+  <meta name="twitter:description" content="DevNotes+ stores every note as a Markdown file with YAML frontmatter in .devnotes/. Full field reference, folder layout, and how to read or edit notes without the extension.">
+  <meta name="twitter:image" content="https://hiba-chaabnia.github.io/DevNotes-Plus/assets/icon.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/guide.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "TechArticle",
+        "headline": "The .devnotes File Format",
+        "description": "DevNotes+ stores every note as a Markdown file with YAML frontmatter in .devnotes/. Full field reference, folder layout, and how to read or edit notes without the extension.",
+        "url": "https://hiba-chaabnia.github.io/DevNotes-Plus/guide/file-format.html",
+        "inLanguage": "en",
+        "dateModified": "2026-09-02",
+        "author": { "@type": "Person", "name": "Hiba Chaabnia" },
+        "publisher": { "@type": "Person", "name": "Hiba Chaabnia" },
+        "about": {
+          "@type": "SoftwareApplication",
+          "name": "DevNotes+",
+          "applicationCategory": "DeveloperApplication",
+          "operatingSystem": "Windows, macOS, Linux"
+        },
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "DevNotes+",
+          "url": "https://hiba-chaabnia.github.io/DevNotes-Plus/"
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "DevNotes+", "item": "https://hiba-chaabnia.github.io/DevNotes-Plus/" },
+          { "@type": "ListItem", "position": 2, "name": "Guide", "item": "https://hiba-chaabnia.github.io/DevNotes-Plus/guide/" },
+          { "@type": "ListItem", "position": 3, "name": "The .devnotes File Format", "item": "https://hiba-chaabnia.github.io/DevNotes-Plus/guide/file-format.html" }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+<header class="navbar">
+  <div class="container nav-container">
+    <a class="nav-logo" href="../">
+      <img class="logo-badge" src="../assets/icon.png" alt="">
+      DevNotes+
+    </a>
+    <nav class="nav-links">
+      <a class="nav-link" href="../#features">Features</a>
+      <a class="nav-link current" href="./">Guide</a>
+      <a class="nav-link" href="../#feedback">Feedback</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="btn btn-ghost" href="https://github.com/Hiba-Chaabnia/DevNotes-Plus"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.2 1.9 1.2 1.1 1.9 2.9 1.3 3.6 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.6 4.9 18.6 5.2 18.6 5.2c.7 1.7.3 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3"/></svg><span>View on GitHub</span></a>
+      <a class="btn btn-primary" href="https://marketplace.visualstudio.com/items?itemName=HibaChaabnia.devnotes-plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Install for VS Code</span></a>
+    </div>
+  </div>
+</header>
+
+<main class="container guide-shell">
+  <aside class="guide-sidebar">
+    <p class="sb-heading">User guide</p>
+    <ol>
+      <li><a href="./">Overview</a></li>
+      <li><a href="getting-started.html">Getting started</a></li>
+      <li><a href="anchoring-notes-to-code.html">Anchoring notes to code</a></li>
+      <li><a href="organizing-notes.html">Organizing notes</a></li>
+      <li><a href="claude-code-mcp.html">Claude Code & MCP</a></li>
+      <li><a href="team-sharing.html">Sharing with your team</a></li>
+      <li><a href="file-format.html" aria-current="page">File format & storage</a></li>
+    </ol>
+  </aside>
+
+  <article class="guide-body">
+    <p class="breadcrumb"><a href="../">DevNotes+</a><span>/</span><a href="./">Guide</a><span>/</span>File format &amp; storage</p>
+    <h1>File format &amp; storage</h1>
+    <p class="guide-lede">Every note is a Markdown file with a YAML-style frontmatter block, sitting in a folder in your repo. No database, no proprietary container, nothing you need DevNotes+ to read.</p>
+<h2>Folder layout</h2>
+
+<pre><code>your-project/
+  .devnotes/
+    .gitignore        <span class="c"># ignores everything by default</span>
+    tags.json         <span class="c"># tag definitions (committed, shared with the team)</span>
+    templates.json    <span class="c"># your custom note templates</span>
+    assets/           <span class="c"># images pasted or dragged into notes</span>
+    &lt;id&gt;.md           <span class="c"># one file per note</span></code></pre>
+
+    <p>The folder is created at the workspace root the first time you make a note, and each note is a separate file named after its ID. Nothing is stored outside the project, and nothing is sent anywhere.</p>
+
+    <h2>A note file</h2>
+
+<pre><code>---
+id: n-k3f9a2
+title: Why the 60s retry floor
+tags: reference
+starred: true
+createdAt: 1756166400000
+updatedAt: 1756252800000
+shared: true
+branch: fix/rate-limit-copy
+owner: Hiba Chaabnia
+codeLink_file: src/github/client.js
+codeLink_line: 60
+codeLink_lineContent: const RETRY_FLOOR_MS = 60_000;
+---
+Retrying at the exact `x-ratelimit-reset` timestamp still 403'd on
+4 of 50 runs — GitHub rounds the header down to the second.</code></pre>
+
+    <p>Everything below the closing <code>---</code> is the note body, in ordinary Markdown. Everything above it is metadata.</p>
+
+    <h2>Frontmatter fields</h2>
+
+    <p>Only the first six are always present. The rest appear when the corresponding feature is used, and are simply absent otherwise.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Type</th><th>Meaning</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>string</td><td>Note ID. Matches the filename. Required — a file without one is skipped.</td></tr>
+          <tr><td><code>title</code></td><td>string</td><td>Note title.</td></tr>
+          <tr><td><code>tags</code></td><td>string</td><td>Comma-separated tag IDs, e.g. <code>bug,todo</code>.</td></tr>
+          <tr><td><code>starred</code></td><td>boolean</td><td>Whether the note is starred.</td></tr>
+          <tr><td><code>createdAt</code></td><td>number</td><td>Unix timestamp in milliseconds.</td></tr>
+          <tr><td><code>updatedAt</code></td><td>number</td><td>Unix timestamp in milliseconds.</td></tr>
+          <tr><td><code>shared</code></td><td>boolean</td><td>Present and <code>true</code> when the note is un-ignored in <code>.devnotes/.gitignore</code>.</td></tr>
+          <tr><td><code>branch</code></td><td>string</td><td>Git branch this note is scoped to. Absent means visible on every branch.</td></tr>
+          <tr><td><code>owner</code></td><td>string</td><td>Git user name of whoever created the note.</td></tr>
+          <tr><td><code>archived</code></td><td>boolean</td><td>Present and <code>true</code> when archived.</td></tr>
+          <tr><td><code>remindAt</code></td><td>number</td><td>Unix timestamp in milliseconds for the reminder.</td></tr>
+          <tr><td><code>linked_notes</code></td><td>string</td><td>Comma-separated IDs of related notes.</td></tr>
+          <tr><td><code>codeLink_file</code></td><td>string</td><td>Workspace-relative path of the linked file.</td></tr>
+          <tr><td><code>codeLink_line</code></td><td>number</td><td>1-based line number.</td></tr>
+          <tr><td><code>codeLink_lineContent</code></td><td>string</td><td>The text of that line when the link was made, used to recover the anchor when code moves.</td></tr>
+          <tr><td><code>github_url</code></td><td>string</td><td>Linked issue or PR URL.</td></tr>
+          <tr><td><code>github_repo</code></td><td>string</td><td><code>owner/repo</code>.</td></tr>
+          <tr><td><code>github_number</code></td><td>number</td><td>Issue or PR number.</td></tr>
+          <tr><td><code>github_type</code></td><td>string</td><td><code>issue</code> or <code>pr</code>.</td></tr>
+          <tr><td><code>github_status</code></td><td>string</td><td><code>open</code>, <code>closed</code> or <code>merged</code>.</td></tr>
+          <tr><td><code>github_title</code></td><td>string</td><td>Title of the linked issue or PR.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Frontmatter rules</h2>
+
+    <p>The parser handles a deliberately small subset of YAML, so that reading a note never depends on a YAML library and never fails in a surprising way:</p>
+
+    <ul>
+      <li>One <code>key: value</code> pair per line. Multi-line values are not supported.</li>
+      <li>Newlines inside a value are collapsed to a single space when written, so a pasted multi-line title can never break the closing delimiter.</li>
+      <li>The closing <code>---</code> must be on its own line. A <code>---</code> inside a value is safe.</li>
+      <li><code>true</code> and <code>false</code> become booleans. Values that are unambiguously integers become numbers; anything with a leading zero stays a string, so a branch named <code>007</code> is not silently turned into the number 7.</li>
+    </ul>
+
+    <h2>Images</h2>
+
+    <p>Images pasted or dragged into the editor are written to <code>.devnotes/assets/</code> and referenced from the note with a normal Markdown image link:</p>
+
+<pre><code>![screenshot](.devnotes/assets/2026-08-26-panel.png)</code></pre>
+
+    <p>When you share a note, DevNotes+ scans its body for these references and un-ignores the matching asset files, so images travel with the note through git.</p>
+
+    <h2>Editing notes by hand</h2>
+
+    <p>You can. The files are yours, and DevNotes+ watches the folder — edit a note in another editor, or pull a teammate's change, and the sidebar picks it up without a reload.</p>
+
+    <p>Two things to preserve if you do: keep the <code>id</code> matching the filename, and keep the frontmatter block intact. A file missing its <code>id</code> is skipped with a warning rather than shown as a broken note.</p>
+
+    <div class="callout callout-warn">
+      <span class="callout-label">Editing conflicted files</span>
+      <p>If a note contains git conflict markers, resolve it through the conflict panel rather than by hand where you can — see <a href="team-sharing.html">sharing with your team</a>. DevNotes+ detects the markers and will treat the file as conflicted until they are gone.</p>
+    </div>
+
+    <h2>Why plain files</h2>
+
+    <p>The format is the feature. Because notes are Markdown in your repo:</p>
+
+    <ul>
+      <li>They are <strong>readable anywhere</strong> — any Markdown editor, <code>cat</code>, GitHub's file view. Uninstalling DevNotes+ does not take your notes with it.</li>
+      <li>They are <strong>diffable</strong>. A shared note shows up in <code>git diff</code> and in pull request reviews like source code, because it is a text file like source code.</li>
+      <li>They are <strong>backed up</strong> wherever your repository is, with no separate sync to think about.</li>
+      <li>They are <strong>greppable</strong>, by you and by any tool you point at the folder — which is also how the <a href="claude-code-mcp.html">MCP server</a> reads them.</li>
+    </ul>
+    <nav class="next-nav">
+      <a href="team-sharing.html"><span class="dir">Previous</span><span class="t">Sharing with your team</span></a>
+    </nav>
+  </article>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <img class="logo-badge" src="../assets/icon.png" alt="">
+        DevNotes+
+      </div>
+      <nav class="footer-links">
+        <a href="../">Home</a>
+        <a href="./">Guide</a>
+        <a href="https://marketplace.visualstudio.com/items?itemName=HibaChaabnia.devnotes-plus">VS Code Marketplace</a>
+        <a href="https://open-vsx.org/extension/HibaChaabnia/devnotes-plus">Open VSX</a>
+        <a href="https://github.com/Hiba-Chaabnia/DevNotes-Plus">GitHub</a>
+        <a href="https://github.com/Hiba-Chaabnia/DevNotes-Plus/issues">Report an issue</a>
+      </nav>
+    </div>
+    <p class="footer-legal">
+      DevNotes+ is free and open source under the AGPL-3.0 licence. Built by Hiba Chaabnia.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>

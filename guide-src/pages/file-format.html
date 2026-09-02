@@ -1,0 +1,111 @@
+<h1>File format &amp; storage</h1>
+<lede>Every note is a Markdown file with a YAML-style frontmatter block, sitting in a folder in your repo. No database, no proprietary container, nothing you need DevNotes+ to read.</lede>
+
+    <h2>Folder layout</h2>
+
+<pre><code>your-project/
+  .devnotes/
+    .gitignore        <span class="c"># ignores everything by default</span>
+    tags.json         <span class="c"># tag definitions (committed, shared with the team)</span>
+    templates.json    <span class="c"># your custom note templates</span>
+    assets/           <span class="c"># images pasted or dragged into notes</span>
+    &lt;id&gt;.md           <span class="c"># one file per note</span></code></pre>
+
+    <p>The folder is created at the workspace root the first time you make a note, and each note is a separate file named after its ID. Nothing is stored outside the project, and nothing is sent anywhere.</p>
+
+    <h2>A note file</h2>
+
+<pre><code>---
+id: n-k3f9a2
+title: Why the 60s retry floor
+tags: reference
+starred: true
+createdAt: 1756166400000
+updatedAt: 1756252800000
+shared: true
+branch: fix/rate-limit-copy
+owner: Hiba Chaabnia
+codeLink_file: src/github/client.js
+codeLink_line: 60
+codeLink_lineContent: const RETRY_FLOOR_MS = 60_000;
+---
+Retrying at the exact `x-ratelimit-reset` timestamp still 403'd on
+4 of 50 runs — GitHub rounds the header down to the second.</code></pre>
+
+    <p>Everything below the closing <code>---</code> is the note body, in ordinary Markdown. Everything above it is metadata.</p>
+
+    <h2>Frontmatter fields</h2>
+
+    <p>Only the first six are always present. The rest appear when the corresponding feature is used, and are simply absent otherwise.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Type</th><th>Meaning</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>string</td><td>Note ID. Matches the filename. Required — a file without one is skipped.</td></tr>
+          <tr><td><code>title</code></td><td>string</td><td>Note title.</td></tr>
+          <tr><td><code>tags</code></td><td>string</td><td>Comma-separated tag IDs, e.g. <code>bug,todo</code>.</td></tr>
+          <tr><td><code>starred</code></td><td>boolean</td><td>Whether the note is starred.</td></tr>
+          <tr><td><code>createdAt</code></td><td>number</td><td>Unix timestamp in milliseconds.</td></tr>
+          <tr><td><code>updatedAt</code></td><td>number</td><td>Unix timestamp in milliseconds.</td></tr>
+          <tr><td><code>shared</code></td><td>boolean</td><td>Present and <code>true</code> when the note is un-ignored in <code>.devnotes/.gitignore</code>.</td></tr>
+          <tr><td><code>branch</code></td><td>string</td><td>Git branch this note is scoped to. Absent means visible on every branch.</td></tr>
+          <tr><td><code>owner</code></td><td>string</td><td>Git user name of whoever created the note.</td></tr>
+          <tr><td><code>archived</code></td><td>boolean</td><td>Present and <code>true</code> when archived.</td></tr>
+          <tr><td><code>remindAt</code></td><td>number</td><td>Unix timestamp in milliseconds for the reminder.</td></tr>
+          <tr><td><code>linked_notes</code></td><td>string</td><td>Comma-separated IDs of related notes.</td></tr>
+          <tr><td><code>codeLink_file</code></td><td>string</td><td>Workspace-relative path of the linked file.</td></tr>
+          <tr><td><code>codeLink_line</code></td><td>number</td><td>1-based line number.</td></tr>
+          <tr><td><code>codeLink_lineContent</code></td><td>string</td><td>The text of that line when the link was made, used to recover the anchor when code moves.</td></tr>
+          <tr><td><code>github_url</code></td><td>string</td><td>Linked issue or PR URL.</td></tr>
+          <tr><td><code>github_repo</code></td><td>string</td><td><code>owner/repo</code>.</td></tr>
+          <tr><td><code>github_number</code></td><td>number</td><td>Issue or PR number.</td></tr>
+          <tr><td><code>github_type</code></td><td>string</td><td><code>issue</code> or <code>pr</code>.</td></tr>
+          <tr><td><code>github_status</code></td><td>string</td><td><code>open</code>, <code>closed</code> or <code>merged</code>.</td></tr>
+          <tr><td><code>github_title</code></td><td>string</td><td>Title of the linked issue or PR.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Frontmatter rules</h2>
+
+    <p>The parser handles a deliberately small subset of YAML, so that reading a note never depends on a YAML library and never fails in a surprising way:</p>
+
+    <ul>
+      <li>One <code>key: value</code> pair per line. Multi-line values are not supported.</li>
+      <li>Newlines inside a value are collapsed to a single space when written, so a pasted multi-line title can never break the closing delimiter.</li>
+      <li>The closing <code>---</code> must be on its own line. A <code>---</code> inside a value is safe.</li>
+      <li><code>true</code> and <code>false</code> become booleans. Values that are unambiguously integers become numbers; anything with a leading zero stays a string, so a branch named <code>007</code> is not silently turned into the number 7.</li>
+    </ul>
+
+    <h2>Images</h2>
+
+    <p>Images pasted or dragged into the editor are written to <code>.devnotes/assets/</code> and referenced from the note with a normal Markdown image link:</p>
+
+<pre><code>![screenshot](.devnotes/assets/2026-08-26-panel.png)</code></pre>
+
+    <p>When you share a note, DevNotes+ scans its body for these references and un-ignores the matching asset files, so images travel with the note through git.</p>
+
+    <h2>Editing notes by hand</h2>
+
+    <p>You can. The files are yours, and DevNotes+ watches the folder — edit a note in another editor, or pull a teammate's change, and the sidebar picks it up without a reload.</p>
+
+    <p>Two things to preserve if you do: keep the <code>id</code> matching the filename, and keep the frontmatter block intact. A file missing its <code>id</code> is skipped with a warning rather than shown as a broken note.</p>
+
+    <div class="callout callout-warn">
+      <span class="callout-label">Editing conflicted files</span>
+      <p>If a note contains git conflict markers, resolve it through the conflict panel rather than by hand where you can — see <a href="team-sharing.html">sharing with your team</a>. DevNotes+ detects the markers and will treat the file as conflicted until they are gone.</p>
+    </div>
+
+    <h2>Why plain files</h2>
+
+    <p>The format is the feature. Because notes are Markdown in your repo:</p>
+
+    <ul>
+      <li>They are <strong>readable anywhere</strong> — any Markdown editor, <code>cat</code>, GitHub's file view. Uninstalling DevNotes+ does not take your notes with it.</li>
+      <li>They are <strong>diffable</strong>. A shared note shows up in <code>git diff</code> and in pull request reviews like source code, because it is a text file like source code.</li>
+      <li>They are <strong>backed up</strong> wherever your repository is, with no separate sync to think about.</li>
+      <li>They are <strong>greppable</strong>, by you and by any tool you point at the folder — which is also how the <a href="claude-code-mcp.html">MCP server</a> reads them.</li>
+    </ul>

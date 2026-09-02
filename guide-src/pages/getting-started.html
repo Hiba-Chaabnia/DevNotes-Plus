@@ -1,0 +1,77 @@
+<h1>Getting started</h1>
+<lede>Install DevNotes+, open the panel, and write a note that knows which line of code it is about. Two minutes, no configuration.</lede>
+
+    <h2>Install</h2>
+
+    <p>DevNotes+ is published to both extension registries, so it installs the same way whichever editor you use.</p>
+
+    <h3>From inside VS Code</h3>
+
+    <ol class="steps">
+      <li>Open the Extensions view with <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> (<kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> on macOS).</li>
+      <li>Search for <strong>DevNotes+</strong>.</li>
+      <li>Choose the one published by <strong>HibaChaabnia</strong> and click <strong>Install</strong>.</li>
+    </ol>
+
+    <div class="callout callout-note">
+      <span class="callout-label">Note</span>
+      <p>There is more than one extension with a similar name. The identifier you want is <code>HibaChaabnia.devnotes-plus</code>.</p>
+    </div>
+
+    <h3>From a registry page</h3>
+
+    <ul>
+      <li><a href="https://marketplace.visualstudio.com/items?itemName=HibaChaabnia.devnotes-plus">VS Code Marketplace</a> — for VS Code.</li>
+      <li><a href="https://open-vsx.org/extension/HibaChaabnia/devnotes-plus">Open VSX</a> — for VSCodium, Cursor, Gitpod, Eclipse Theia and anything else that uses the vendor-neutral registry.</li>
+    </ul>
+
+    <h3>From the command line</h3>
+
+<pre><code>code --install-extension HibaChaabnia.devnotes-plus</code></pre>
+
+    <h2>Open a project</h2>
+
+    <p>DevNotes+ stores notes inside the project they describe, so it needs a workspace folder to work with. Open one with <strong>File → Open Folder</strong> before you start. If you launch VS Code with no folder open, the DevNotes+ panel will tell you so rather than showing an empty note list.</p>
+
+    <p>The first time you create a note in a project, DevNotes+ creates a <code>.devnotes/</code> folder at the workspace root, along with a <code>.gitignore</code> inside it that ignores everything. That means your notes are private from the very first keystroke — nothing reaches git until you <a href="team-sharing.html">deliberately share a note</a>.</p>
+
+    <h2>Open the sidebar</h2>
+
+    <p>Click the DevNotes+ icon in the activity bar — the vertical strip of icons down the side of the window. If you would rather not hunt for it, run <strong>DevNotes: Open DevNotes Sidebar</strong> from the Command Palette (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>).</p>
+
+    <div class="callout callout-tip">
+      <span class="callout-label">Tip</span>
+      <p>The <strong>Notes</strong> section starts collapsed the first time you open the panel. Click its header to expand it.</p>
+    </div>
+
+    <h2>Write your first note</h2>
+
+    <p>The fastest route is the keyboard shortcut, because it captures the context along with the note.</p>
+
+    <ol class="steps">
+      <li>Open any source file and put your cursor on a line you have an opinion about.</li>
+      <li>Press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd> (<kbd>Cmd</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd> on macOS).</li>
+      <li>Type a title and press Enter.</li>
+    </ol>
+
+    <p>Because an editor was focused, the note is automatically linked to that <code>file:line</code>. You will see a small note icon appear in the gutter beside the line, and a <strong>notes here</strong> counter in the status bar. That linkage is the whole point of DevNotes+ — see <a href="anchoring-notes-to-code.html">anchoring notes to code</a> for what it buys you.</p>
+
+    <p>You can also right-click in the editor and choose <strong>Add DevNote Here</strong>, or create an unlinked note with the <strong>+ New</strong> button at the top of the sidebar.</p>
+
+    <h2>Write the body</h2>
+
+    <p>Click the body of a card in the sidebar to edit it in place. This is the right mode for a sentence or two.</p>
+
+    <p>For anything longer, open the full editor from the card. It is a rich block editor with headings, bold and italic, inline code, bullet, numbered and task lists, tables you can add and remove rows and columns from, code blocks, blockquotes, horizontal rules, clickable links, and images you can paste or drag in. Images are copied into <code>.devnotes/assets/</code> and referenced from the note, so they travel with the project.</p>
+
+    <p>Everything is stored as Markdown underneath. If you would rather write in your own editor, or want to know exactly what lands on disk, read <a href="file-format.html">the file format reference</a>.</p>
+
+    <h2>Where to go next</h2>
+
+    <p>You now have a working note. The three things most worth learning next, in the order most people need them:</p>
+
+    <ul>
+      <li><a href="organizing-notes.html">Tags, branch scoping and reminders</a> — once you have more than a handful of notes.</li>
+      <li><a href="claude-code-mcp.html">Connecting Claude Code</a> — so your assistant can read the notes instead of you pasting them.</li>
+      <li><a href="team-sharing.html">Sharing notes over git</a> — when a note stops being just for you.</li>
+    </ul>

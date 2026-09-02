@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connect DevNotes+ to Claude Code (MCP Server) — DevNotes+</title>
+  <meta name="description" content="Register DevNotes+ as an MCP server so Claude Code can read, search, create and update your project notes directly — with every change attributed in the activity feed.">
+  <link rel="canonical" href="https://hiba-chaabnia.github.io/DevNotes-Plus/guide/claude-code-mcp.html">
+  <meta name="author" content="Hiba Chaabnia">
+  <meta name="theme-color" content="#0F172A">
+
+  <link rel="icon" type="image/png" href="../assets/icon.png">
+  <link rel="apple-touch-icon" href="../assets/icon.png">
+
+  <meta property="og:site_name" content="DevNotes+">
+  <meta property="og:title" content="Connect DevNotes+ to Claude Code (MCP Server) — DevNotes+">
+  <meta property="og:description" content="Register DevNotes+ as an MCP server so Claude Code can read, search, create and update your project notes directly — with every change attributed in the activity feed.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://hiba-chaabnia.github.io/DevNotes-Plus/guide/claude-code-mcp.html">
+  <meta property="og:image" content="https://hiba-chaabnia.github.io/DevNotes-Plus/assets/icon.png">
+  <meta property="og:image:alt" content="The DevNotes+ icon">
+  <meta property="og:locale" content="en_US">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Connect DevNotes+ to Claude Code (MCP Server) — DevNotes+">
+  <meta name="twitter:description" content="Register DevNotes+ as an MCP server so Claude Code can read, search, create and update your project notes directly — with every change attributed in the activity feed.">
+  <meta name="twitter:image" content="https://hiba-chaabnia.github.io/DevNotes-Plus/assets/icon.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/guide.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "TechArticle",
+        "headline": "Connect DevNotes+ to Claude Code (MCP Server)",
+        "description": "Register DevNotes+ as an MCP server so Claude Code can read, search, create and update your project notes directly — with every change attributed in the activity feed.",
+        "url": "https://hiba-chaabnia.github.io/DevNotes-Plus/guide/claude-code-mcp.html",
+        "inLanguage": "en",
+        "dateModified": "2026-09-02",
+        "author": { "@type": "Person", "name": "Hiba Chaabnia" },
+        "publisher": { "@type": "Person", "name": "Hiba Chaabnia" },
+        "about": {
+          "@type": "SoftwareApplication",
+          "name": "DevNotes+",
+          "applicationCategory": "DeveloperApplication",
+          "operatingSystem": "Windows, macOS, Linux"
+        },
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "DevNotes+",
+          "url": "https://hiba-chaabnia.github.io/DevNotes-Plus/"
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "DevNotes+", "item": "https://hiba-chaabnia.github.io/DevNotes-Plus/" },
+          { "@type": "ListItem", "position": 2, "name": "Guide", "item": "https://hiba-chaabnia.github.io/DevNotes-Plus/guide/" },
+          { "@type": "ListItem", "position": 3, "name": "Connect DevNotes+ to Claude Code (MCP Server)", "item": "https://hiba-chaabnia.github.io/DevNotes-Plus/guide/claude-code-mcp.html" }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+<header class="navbar">
+  <div class="container nav-container">
+    <a class="nav-logo" href="../">
+      <img class="logo-badge" src="../assets/icon.png" alt="">
+      DevNotes+
+    </a>
+    <nav class="nav-links">
+      <a class="nav-link" href="../#features">Features</a>
+      <a class="nav-link current" href="./">Guide</a>
+      <a class="nav-link" href="../#feedback">Feedback</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="btn btn-ghost" href="https://github.com/Hiba-Chaabnia/DevNotes-Plus"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.2 1.9 1.2 1.1 1.9 2.9 1.3 3.6 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.6 4.9 18.6 5.2 18.6 5.2c.7 1.7.3 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3"/></svg><span>View on GitHub</span></a>
+      <a class="btn btn-primary" href="https://marketplace.visualstudio.com/items?itemName=HibaChaabnia.devnotes-plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Install for VS Code</span></a>
+    </div>
+  </div>
+</header>
+
+<main class="container guide-shell">
+  <aside class="guide-sidebar">
+    <p class="sb-heading">User guide</p>
+    <ol>
+      <li><a href="./">Overview</a></li>
+      <li><a href="getting-started.html">Getting started</a></li>
+      <li><a href="anchoring-notes-to-code.html">Anchoring notes to code</a></li>
+      <li><a href="organizing-notes.html">Organizing notes</a></li>
+      <li><a href="claude-code-mcp.html" aria-current="page">Claude Code & MCP</a></li>
+      <li><a href="team-sharing.html">Sharing with your team</a></li>
+      <li><a href="file-format.html">File format & storage</a></li>
+    </ol>
+  </aside>
+
+  <article class="guide-body">
+    <p class="breadcrumb"><a href="../">DevNotes+</a><span>/</span><a href="./">Guide</a><span>/</span>Claude Code &amp; MCP</p>
+    <h1>Claude Code &amp; MCP</h1>
+    <p class="guide-lede">DevNotes+ ships an MCP server, so Claude Code can read and write your project notes directly. No copy-pasting context into the conversation, and no notes that go stale because updating them was someone else's job.</p>
+<h2>What this gets you</h2>
+
+    <p>Once connected, Claude Code can search your notes, read one in full, create new ones, append findings to an existing note, tick off todo items, and pull the open-task list for the whole project. Every change it makes is written to the same Markdown files you edit in the sidebar, and shows up in the activity feed attributed to Claude rather than to you.</p>
+
+    <p>The practical effect is that the notes stop being a thing you maintain for the assistant's benefit and start being shared memory. You write down why a constant is 60 seconds; a week later Claude reads that before touching the retry logic.</p>
+
+    <h2>Requirements</h2>
+
+    <ul>
+      <li>The <a href="https://claude.com/claude-code">Claude Code CLI</a>, installed and available on your <code>PATH</code>. DevNotes+ shells out to the <code>claude</code> command to register itself.</li>
+      <li>Node.js, which the Claude Code CLI already requires.</li>
+      <li>A workspace with a <code>.devnotes/</code> folder — that is, one where you have created at least one note.</li>
+    </ul>
+
+    <h2>Connect</h2>
+
+    <p>There are three routes to the same thing. Whichever you use, <strong>restart Claude Code afterwards</strong> so it picks up the new server.</p>
+
+    <h3>The setup banner</h3>
+
+    <p>On a fresh install the sidebar shows a <strong>Set up integrations</strong> panel with two rows — <strong>Connect GitHub</strong> and <strong>Register MCP server</strong>. Clicking the second one registers DevNotes+ with Claude Code. Each row ticks over to a done state once it is wired up, and the banner hides itself automatically when both are.</p>
+
+    <p>You can also dismiss it: <strong>Hide for now</strong> brings it back next session, <strong>Never show again</strong> retires it for good.</p>
+
+    <h3>The Integrations menu</h3>
+
+    <p>Once the banner is gone, reopen it from the <strong>&#8943;</strong> overflow button beside the search box and choose <strong>Integrations</strong>. This works even if you chose "Never show again" — it deliberately overrides both the dismissal and the auto-hide, so you can always check what is connected.</p>
+
+    <h3>The Command Palette</h3>
+
+    <ol class="steps">
+      <li>Open the Command Palette with <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> (<kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> on macOS).</li>
+      <li>Run <strong>DevNotes: Connect to Claude Code (Register MCP Server)</strong>.</li>
+    </ol>
+
+    <p>Under the hood this runs the Claude Code CLI for you:</p>
+
+<pre><code><span class="c"># removes any previous entry first, so the path is always current</span>
+claude mcp add --scope user devnotes node <span class="s">"&lt;path-to-extension&gt;/mcp-server/dist/index.js"</span></code></pre>
+
+    <p>You can confirm it worked with <code>claude mcp list</code> — you are looking for a <code>devnotes</code> entry. Running the command again is safe; it removes and re-adds the entry, which is how you repoint it after the extension updates.</p>
+
+    <div class="callout callout-note">
+      <span class="callout-label">Why user scope</span>
+      <p>The server is registered once for your user account, not per project. It figures out <em>which</em> project's notes to serve at runtime — see below.</p>
+    </div>
+
+    <h2>How the server finds your notes</h2>
+
+    <p>This is the one thing worth understanding properly, because it explains almost every "Claude cannot see my notes" report.</p>
+
+    <p>The server resolves a workspace in this order:</p>
+
+    <ol>
+      <li>The <code>DEVNOTES_WORKSPACE</code> environment variable, if set.</li>
+      <li>A <code>--workspace &lt;path&gt;</code> argument, if passed.</li>
+      <li>Otherwise it walks up from the current working directory looking for a <code>.devnotes/</code> folder, and uses the first one it finds.</li>
+    </ol>
+
+    <p>In normal use that third rule is the one doing the work — which means <strong>you need to start Claude Code from inside the project</strong>. Launch <code>claude</code> from your home directory and it will not find the notes for a project three folders away.</p>
+
+    <div class="callout callout-tip">
+      <span class="callout-label">Tip</span>
+      <p><code>cd</code> into the repo, then run <code>claude</code>. Anywhere inside the repo works, not just the root — the search walks upwards.</p>
+    </div>
+
+    <h2>What Claude can do</h2>
+
+    <p>Fourteen tools are exposed. You do not need to call them by name; ask in plain language and Claude picks the right one.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Tool</th><th>What it does</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>create_note</code></td><td>Creates a note, optionally with tags, a <code>file:line</code> code link, a branch scope and a reminder date.</td></tr>
+          <tr><td><code>get_note</code></td><td>Reads one note in full by ID or fuzzy title match, including its metadata.</td></tr>
+          <tr><td><code>list_notes</code></td><td>Lists notes, filtered by tag, text, branch, starred or archived state.</td></tr>
+          <tr><td><code>search_notes</code></td><td>Full-text search with ranked results and match snippets. Title matches rank above content matches.</td></tr>
+          <tr><td><code>append_to_note</code></td><td>Adds a timestamped section to an existing note without replacing what is there.</td></tr>
+          <tr><td><code>update_note</code></td><td>Changes a note's title, tags, starred or shared status. Does not touch the body.</td></tr>
+          <tr><td><code>get_todos</code></td><td>Pulls every unchecked <code>- [ ]</code> item from every note into one list, grouped by note.</td></tr>
+          <tr><td><code>complete_todo</code></td><td>Ticks off todo items by substring match.</td></tr>
+          <tr><td><code>get_stale_notes</code></td><td>Finds notes untouched for N days that still have open todos or a bug tag. Defaults to 14 days.</td></tr>
+          <tr><td><code>note_history</code></td><td>Shows the git commit history for a note file — who changed it and when. Shared notes only, and needs a git repo.</td></tr>
+          <tr><td><code>log_session</code></td><td>Appends a timestamped entry to a running session log note.</td></tr>
+          <tr><td><code>delete_note</code></td><td>Permanently deletes a note. Guarded by an explicit confirm flag.</td></tr>
+          <tr><td><code>link_github</code></td><td>Links a note to a GitHub issue or PR, fetching its title and status.</td></tr>
+          <tr><td><code>get_github_context</code></td><td>Pulls the full picture for a linked issue or PR: description, labels, assignees and the last 20 comments.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout callout-warn">
+      <span class="callout-label">Deletion is permanent</span>
+      <p><code>delete_note</code> removes the file. There is no undo inside DevNotes+ — if the note was shared and committed, git is your recovery path; if it was private, it is gone. Ask Claude to archive rather than delete when you are not certain.</p>
+    </div>
+
+    <h2>Resources</h2>
+
+    <p>The server also exposes three read-only resources that Claude can pull in as context without being asked to run a tool:</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Resource</th><th>Contents</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>devnotes://todos</code></td><td>Every unchecked todo across all notes.</td></tr>
+          <tr><td><code>devnotes://recent</code></td><td>Notes created or updated in the last 72 hours.</td></tr>
+          <tr><td><code>devnotes://session-log</code></td><td>The last five session log entries — what previous sessions worked on.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Prompts</h2>
+
+    <p>Two slash-style prompts come with the server:</p>
+
+    <ul>
+      <li><strong><code>solve</code></strong> — takes a note, reads it together with the code it is linked to, works out a fix, and saves the result back to the note as a Solution section. This is the one that makes code-linked notes pay off.</li>
+      <li><strong><code>standup</code></strong> — builds a Done / Doing / Blocked summary from everything updated in the last 24 hours.</li>
+    </ul>
+
+    <h2>Things to ask for</h2>
+
+    <p>A few phrasings that map cleanly onto the tools:</p>
+
+    <ul>
+      <li>&ldquo;What are my open todos in this project?&rdquo;</li>
+      <li>&ldquo;Read the note about the rate limit floor before you change the retry logic.&rdquo;</li>
+      <li>&ldquo;Write up what we just figured out as a note on <code>src/github/client.js</code> line 60.&rdquo;</li>
+      <li>&ldquo;Which notes have gone stale?&rdquo;</li>
+      <li>&ldquo;Append the fix to the rate-limit note and tick off the todo about <code>retryAfterMs</code>.&rdquo;</li>
+    </ul>
+
+    <h2>Troubleshooting</h2>
+
+    <h3>The command says the Claude CLI was not found</h3>
+
+    <p>DevNotes+ checks for <code>claude</code> on your <code>PATH</code>. If <code>claude --version</code> does not work in a fresh terminal, it will not work from the extension either. Install the CLI, then restart VS Code so it inherits the updated environment — a shell you opened before installing will not have it.</p>
+
+    <h3>Claude connects but reports no notes</h3>
+
+    <p>Almost always the working directory. Check that you started <code>claude</code> from inside the project, and that the project actually has a <code>.devnotes/</code> folder — create one note in the sidebar if not. To rule it out entirely, set <code>DEVNOTES_WORKSPACE</code> to the absolute path of the project.</p>
+
+    <h3>Changes do not appear in the sidebar</h3>
+
+    <p>They should appear on their own — DevNotes+ watches <code>.devnotes/</code> and reloads when files change underneath it. If the panel looks stale, run <strong>DevNotes: Refresh</strong>.</p>
+
+    <h3>The server points at an old install</h3>
+
+    <p>Re-register from any of the three routes above &mdash; the Command Palette command is the quickest. It removes the existing entry before adding the current path, so it doubles as a repair command.</p>
+
+    <h3>Private GitHub repositories</h3>
+
+    <p><code>link_github</code> and <code>get_github_context</code> reach the GitHub API from the MCP server process, which does not share VS Code's authentication. For private repos, set a <code>DEVNOTES_GITHUB_TOKEN</code> environment variable. Linking issues from the sidebar is unaffected — that path uses VS Code's built-in GitHub sign-in.</p>
+    <nav class="next-nav">
+      <a href="organizing-notes.html"><span class="dir">Previous</span><span class="t">Organizing notes</span></a>
+      <a href="team-sharing.html"><span class="dir">Next</span><span class="t">Sharing with your team</span></a>
+    </nav>
+  </article>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <img class="logo-badge" src="../assets/icon.png" alt="">
+        DevNotes+
+      </div>
+      <nav class="footer-links">
+        <a href="../">Home</a>
+        <a href="./">Guide</a>
+        <a href="https://marketplace.visualstudio.com/items?itemName=HibaChaabnia.devnotes-plus">VS Code Marketplace</a>
+        <a href="https://open-vsx.org/extension/HibaChaabnia/devnotes-plus">Open VSX</a>
+        <a href="https://github.com/Hiba-Chaabnia/DevNotes-Plus">GitHub</a>
+        <a href="https://github.com/Hiba-Chaabnia/DevNotes-Plus/issues">Report an issue</a>
+      </nav>
+    </div>
+    <p class="footer-legal">
+      DevNotes+ is free and open source under the AGPL-3.0 licence. Built by Hiba Chaabnia.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>

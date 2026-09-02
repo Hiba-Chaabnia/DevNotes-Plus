@@ -1,0 +1,83 @@
+<h1>DevNotes+ user guide</h1>
+<lede>Everything DevNotes+ does, one task at a time. Start at the top if you have just installed it, or jump straight to the part you need.</lede>
+
+    <div class="card-grid">
+      <a class="card-link" href="getting-started.html">
+        <span class="t">Getting started</span>
+        <span class="d">Install, open the sidebar, and capture your first note in about a minute.</span>
+      </a>
+      <a class="card-link" href="anchoring-notes-to-code.html">
+        <span class="t">Anchoring notes to code</span>
+        <span class="d">Pin a note to a file and line, and keep it there as the code moves.</span>
+      </a>
+      <a class="card-link" href="organizing-notes.html">
+        <span class="t">Organizing notes</span>
+        <span class="d">Tags, branch scoping, reminders, starring, archiving, and templates.</span>
+      </a>
+      <a class="card-link" href="claude-code-mcp.html">
+        <span class="t">Claude Code &amp; MCP</span>
+        <span class="d">Let Claude Code read and write your notes without copy-paste.</span>
+      </a>
+      <a class="card-link" href="team-sharing.html">
+        <span class="t">Sharing with your team</span>
+        <span class="d">Opt a note into git, share a tag set, and resolve note conflicts.</span>
+      </a>
+      <a class="card-link" href="file-format.html">
+        <span class="t">File format &amp; storage</span>
+        <span class="d">What lands on disk, and how to read it without the extension.</span>
+      </a>
+    </div>
+
+    <h2>What DevNotes+ is</h2>
+
+    <p>DevNotes+ is a VS Code extension that keeps developer notes inside the project they belong to. A note can be attached to a specific file and line, scoped to a git branch, tagged, given a reminder, linked to a GitHub issue or PR, and read by Claude Code — all without leaving the editor.</p>
+
+    <p>Notes are stored as ordinary Markdown files in a <code>.devnotes/</code> folder at the root of your workspace. Nothing is uploaded anywhere, there is no account, and the folder is gitignored by default, so notes stay on your machine until you explicitly choose to share one.</p>
+
+    <div class="callout callout-note">
+      <span class="callout-label">Scope</span>
+      <p>DevNotes+ is per-workspace. Open a different folder in VS Code and you get that project's notes. There is no global note list, by design — the notes live with the code they describe.</p>
+    </div>
+
+    <h2>The shape of the thing</h2>
+
+    <p>Almost everything happens in the sidebar, which you open from the DevNotes+ icon in the activity bar. Cards there can be edited in place, or opened in a full rich-text editor when a note grows past a paragraph.</p>
+
+    <p>Outside the sidebar there are three touchpoints worth knowing about: the <strong>gutter icon</strong> next to any line that has a note, the <strong>status bar</strong> item showing how many notes point at the file you are looking at, and one <strong>keyboard shortcut</strong> — <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd> (<kbd>Cmd</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd> on macOS) — which captures a note linked to wherever your cursor is.</p>
+
+    <p>Every other action lives in the sidebar or the Command Palette under the <code>DevNotes:</code> prefix.</p>
+
+    <h2>Commands</h2>
+
+    <p>The full set of commands contributed to the Command Palette:</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Command</th><th>What it does</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>DevNotes: Add DevNote Here</td><td>Creates a note linked to the current file and line. Bound to <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd>.</td></tr>
+          <tr><td>DevNotes: Open DevNotes Sidebar</td><td>Reveals and focuses the DevNotes+ panel.</td></tr>
+          <tr><td>DevNotes: Jump to Linked File</td><td>Opens the file and line a note points at.</td></tr>
+          <tr><td>DevNotes: Connect to Claude Code (Register MCP Server)</td><td>Registers the bundled MCP server with the Claude Code CLI.</td></tr>
+          <tr><td>DevNotes: Export All Notes</td><td>Exports every note as a self-contained HTML file, or copies them as Markdown.</td></tr>
+          <tr><td>DevNotes: Export Note</td><td>The same, for a single note.</td></tr>
+          <tr><td>DevNotes: Refresh</td><td>Re-reads <code>.devnotes/</code> from disk.</td></tr>
+          <tr><td>DevNotes: Refresh Activity Feed</td><td>Re-reads the activity feed.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Requirements</h2>
+
+    <ul>
+      <li><strong>VS Code 1.85</strong> or newer. DevNotes+ also runs on editors that use the Open VSX registry, including VSCodium, Cursor, Gitpod and Eclipse Theia.</li>
+      <li><strong>An open workspace folder.</strong> With no folder open there is nowhere to put <code>.devnotes/</code>, and the sidebar says so instead of showing a note list.</li>
+      <li><strong>Git</strong> is optional. Without it you lose branch scoping, note ownership and sharing; everything else works.</li>
+      <li><strong>The Claude Code CLI</strong> is optional, and only needed for the <a href="claude-code-mcp.html">MCP integration</a>.</li>
+    </ul>
+
+    <h2>Getting help</h2>
+
+    <p>If something here does not match what you are seeing, or DevNotes+ does something you did not expect, <a href="https://github.com/Hiba-Chaabnia/DevNotes-Plus/issues">open an issue on GitHub</a>. Bug reports that name your OS, VS Code version and DevNotes+ version get resolved fastest.</p>

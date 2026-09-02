@@ -1,0 +1,76 @@
+<h1>Sharing notes with your team</h1>
+<lede>Notes are private until you say otherwise. Sharing one puts it through git like any other file in the repo — reviewable in a diff, visible in a PR, and merged the same way.</lede>
+
+    <h2>Private by default</h2>
+
+    <p>The first time DevNotes+ creates <code>.devnotes/</code> in a project, it writes a <code>.gitignore</code> inside it containing a single line:</p>
+
+<pre><code>*</code></pre>
+
+    <p>Everything in the folder is ignored. You can write whatever you like — half-formed ideas, complaints about the code, notes on a bug you have not reproduced yet — and none of it reaches the repository.</p>
+
+    <div class="callout callout-note">
+      <span class="callout-label">Worth checking once</span>
+      <p>If your project already has a rule that force-adds files, or a global gitignore that behaves unusually, confirm with <code>git status</code> after your first note that <code>.devnotes/</code> is genuinely untracked. It takes ten seconds and the alternative is committing your private notes.</p>
+    </div>
+
+    <h2>Sharing one note</h2>
+
+    <p>Open a note's overflow menu and toggle <strong>Share this note</strong>.</p>
+
+    <p>DevNotes+ then adds a negated entry to <code>.devnotes/.gitignore</code> that un-ignores that one file. Any images the note references are un-ignored too, so the note arrives at your teammate complete rather than with broken image links. The first time you share anything, <code>.gitignore</code> and <code>tags.json</code> are un-ignored as well — the team needs both for sharing to work at all.</p>
+
+    <p>The result is an ordinary Markdown file, staged and committed like any other change:</p>
+
+<pre><code>git add .devnotes
+git commit -m <span class="s">"notes: document the retry floor"</span></code></pre>
+
+    <p>Un-sharing is the same toggle in reverse. Note that this stops <em>future</em> changes from being tracked — a note you have already committed stays in the repository's history until you remove it there, exactly like any other file.</p>
+
+    <div class="callout callout-tip">
+      <span class="callout-label">A reasonable habit</span>
+      <p>Share the notes that answer &ldquo;why is this like this?&rdquo; — the ones a reviewer or a future maintainer would otherwise have to ask about. Keep working notes and reminders to yourself. The value of a shared note collection drops fast when it fills up with other people's todo lists.</p>
+    </div>
+
+    <h2>One tag set for the team</h2>
+
+    <p><code>.devnotes/tags.json</code> holds your tag definitions — labels, colours, icons and order — and it is committed as soon as anyone shares a note. That means a repo has one tag vocabulary rather than one per developer, and a note tagged <strong>Bug</strong> means the same thing wherever it is read.</p>
+
+    <p>Because it is a tracked file, changing tags is a change your team reviews. Renaming a tag or changing its colour turns up in the diff like anything else.</p>
+
+    <h2>Seeing what changed</h2>
+
+    <p>The <strong>Activity</strong> section of the sidebar lists recent note changes with an author and a timestamp, marking whether each was created or updated. Three kinds of author show up: you, your teammates, and Claude Code, which is labelled distinctly so you can tell machine-written notes from human ones.</p>
+
+    <p>Ownership comes from your git user name, so activity attribution needs git configured — <code>git config user.name</code> — and works best when everyone on the team has done the same.</p>
+
+    <p>The section only appears once there is activity to show.</p>
+
+    <h2>When two people edit the same note</h2>
+
+    <p>A shared note is a text file, so git handles it like a text file: if two people change the same note and the changes cannot be merged automatically, you get a conflicted file with <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code> markers in it.</p>
+
+    <p>DevNotes+ detects those markers and flags the note as conflicted rather than showing you a broken card. Opening it brings up a conflict panel that renders both versions side by side — yours and the incoming one, each labelled with the branch or commit it came from — with three ways out:</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Choice</th><th>Result</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Keep mine</td><td>Your version wins; the incoming one is discarded.</td></tr>
+          <tr><td>Keep theirs</td><td>The incoming version wins; yours is discarded.</td></tr>
+          <tr><td>Merge versions</td><td>Opens an editor where you assemble one note from both, then saves that.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Resolving through the panel rewrites the file cleanly, without conflict markers. You still need to stage and commit the result, the same as any other conflict resolution.</p>
+
+    <h2>Pulling in a teammate's notes</h2>
+
+    <p>Nothing special is required. Shared notes arrive with <code>git pull</code> like any other file, and DevNotes+ watches <code>.devnotes/</code> for changes made outside the extension — so the sidebar updates on its own once the pull lands. If it looks stale, run <strong>DevNotes: Refresh</strong>.</p>
+
+    <h2>Working without git</h2>
+
+    <p>DevNotes+ does not require a git repository. Without one you lose sharing, note ownership, activity attribution, branch scoping and <code>note_history</code>. Everything else — notes, code links, tags, reminders, templates, export, the <a href="claude-code-mcp.html">MCP integration</a> — works exactly the same.</p>

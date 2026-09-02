@@ -1,0 +1,82 @@
+<h1>Anchoring notes to code</h1>
+<lede>A note attached to <code>src/auth.ts:82</code> is worth far more than the same note sitting in a document. This is how the link is made, what it looks like in the editor, and what happens when the code underneath it moves.</lede>
+
+    <h2>Creating a linked note</h2>
+
+    <p>Any of these will create a note bound to a specific file and line:</p>
+
+    <ul>
+      <li>Press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd> (<kbd>Cmd</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd> on macOS) with the cursor on the line.</li>
+      <li>Right-click in the editor and choose <strong>Add DevNote Here</strong>.</li>
+      <li>Run <strong>DevNotes: Add DevNote Here</strong> from the Command Palette.</li>
+    </ul>
+
+    <p>The link is captured from wherever the cursor is at that moment. If no editor is focused when you trigger the command, you get an ordinary unlinked note instead — nothing fails, you just do not get the anchor.</p>
+
+    <p>The stored link has three parts: the workspace-relative path, the 1-based line number, and a copy of the text of that line as it read when you made the note. That third part is what makes the link survive editing, and it is explained below.</p>
+
+    <h2>What you see in the editor</h2>
+
+    <h3>The gutter icon</h3>
+
+    <p>Every line with a note attached gets a sticky-note icon in the gutter, to the left of the line number. The line is also marked in the overview ruler — the narrow strip beside the scrollbar — so you can spot annotated regions in a long file without scrolling through it.</p>
+
+    <h3>The hover</h3>
+
+    <p>Hover anywhere over the <em>text</em> of an annotated line and the note's title appears in VS Code's standard hover widget, alongside whatever your language server has to say about that line.</p>
+
+    <div class="callout callout-note">
+      <span class="callout-label">Why not hover the icon?</span>
+      <p>VS Code has no API for attaching a tooltip to a gutter icon — the gutter is outside the text surface and never fires hover providers. The hover is registered on the line text instead, which is the supported mechanism.</p>
+    </div>
+
+    <h3>The status bar</h3>
+
+    <p>When the file you are looking at has notes pointing at it, the status bar shows <strong>N notes here</strong>. Its tooltip lists the note titles, and clicking it opens the DevNotes+ panel. Archived notes are not counted.</p>
+
+    <h2>Jumping back to the code</h2>
+
+    <p>Every linked card in the sidebar can take you to its line — open the file and move the cursor to the exact position. This is the direction most people use it in: you are reading notes, you want the code.</p>
+
+    <p>The Command Palette equivalent is <strong>DevNotes: Jump to Linked File</strong>.</p>
+
+    <h2>When the code moves</h2>
+
+    <p>This is the hard part of anchoring notes to line numbers, and DevNotes+ handles it in two ways.</p>
+
+    <h3>Renamed and moved files</h3>
+
+    <p>If you rename or move a file <em>inside VS Code</em>, every note pointing at it is updated to the new path automatically.</p>
+
+    <div class="callout callout-warn">
+      <span class="callout-label">Limitation</span>
+      <p>This relies on VS Code's rename event. A file renamed outside the editor — with <code>git mv</code>, your shell, or another program — will not be picked up, and notes pointing at the old path will not resolve until you re-link them.</p>
+    </div>
+
+    <h3>Lines that drift</h3>
+
+    <p>Adding twenty lines to the top of a file would ordinarily leave every note in it pointing twenty lines too high. DevNotes+ corrects for that by remembering the <em>content</em> of the anchored line, not just its number.</p>
+
+    <p>When a file is opened or saved, DevNotes+ searches within 100 lines either side of each note's stored position for a line matching the remembered text. If it finds one somewhere else, the note's line number is quietly updated and the gutter icon moves with it.</p>
+
+    <p>Two details worth knowing:</p>
+
+    <ul>
+      <li><strong>Short lines are skipped.</strong> A stored line has to be at least 10 characters after trimming to be used as an anchor. A lone <code>}</code> matches everywhere and would be worse than useless.</li>
+      <li><strong>Duplicate lines are disambiguated.</strong> When several notes are anchored to identical text, each one is assigned to a distinct occurrence — nearest first — so they do not all collapse onto the same line when a block of code is inserted above them.</li>
+    </ul>
+
+    <p>If the anchored line is deleted outright, or edited past recognition, the note keeps its last known position. It does not disappear, and it does not jump somewhere arbitrary.</p>
+
+    <div class="callout callout-tip">
+      <span class="callout-label">Tip</span>
+      <p>Anchor notes to something distinctive — a function signature, a named constant, a specific condition — rather than to a blank line or a closing brace. The more particular the line, the better drift recovery works.</p>
+    </div>
+
+    <h2>Several notes, one line</h2>
+
+    <p>Nothing stops you attaching more than one note to the same line. The gutter shows a single icon, and the hover lists every note title bound to that position.</p>
+
+    <h2>Notes without a link</h2>
+
+    <p>Plenty of notes are about the project rather than a line of it — a decision record, a meeting summary, a release checklist. Create those with <strong>+ New</strong> in the sidebar and leave them unlinked. They behave exactly like linked notes everywhere else: tags, branch scoping, reminders, sharing and Claude Code access all work the same way.</p>

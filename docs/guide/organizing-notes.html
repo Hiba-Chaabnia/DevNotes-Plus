@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Organizing Notes with Tags, Branches and Reminders — DevNotes+</title>
+  <meta name="description" content="Tag notes with custom colours and icons, scope them to a git branch, set reminders, star and archive, and start from one of six built-in templates.">
+  <link rel="canonical" href="https://hiba-chaabnia.github.io/DevNotes-Plus/guide/organizing-notes.html">
+  <meta name="author" content="Hiba Chaabnia">
+  <meta name="theme-color" content="#0F172A">
+
+  <link rel="icon" type="image/png" href="../assets/icon.png">
+  <link rel="apple-touch-icon" href="../assets/icon.png">
+
+  <meta property="og:site_name" content="DevNotes+">
+  <meta property="og:title" content="Organizing Notes with Tags, Branches and Reminders — DevNotes+">
+  <meta property="og:description" content="Tag notes with custom colours and icons, scope them to a git branch, set reminders, star and archive, and start from one of six built-in templates.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://hiba-chaabnia.github.io/DevNotes-Plus/guide/organizing-notes.html">
+  <meta property="og:image" content="https://hiba-chaabnia.github.io/DevNotes-Plus/assets/icon.png">
+  <meta property="og:image:alt" content="The DevNotes+ icon">
+  <meta property="og:locale" content="en_US">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Organizing Notes with Tags, Branches and Reminders — DevNotes+">
+  <meta name="twitter:description" content="Tag notes with custom colours and icons, scope them to a git branch, set reminders, star and archive, and start from one of six built-in templates.">
+  <meta name="twitter:image" content="https://hiba-chaabnia.github.io/DevNotes-Plus/assets/icon.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/guide.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "TechArticle",
+        "headline": "Organizing Notes with Tags, Branches and Reminders",
+        "description": "Tag notes with custom colours and icons, scope them to a git branch, set reminders, star and archive, and start from one of six built-in templates.",
+        "url": "https://hiba-chaabnia.github.io/DevNotes-Plus/guide/organizing-notes.html",
+        "inLanguage": "en",
+        "dateModified": "2026-09-02",
+        "author": { "@type": "Person", "name": "Hiba Chaabnia" },
+        "publisher": { "@type": "Person", "name": "Hiba Chaabnia" },
+        "about": {
+          "@type": "SoftwareApplication",
+          "name": "DevNotes+",
+          "applicationCategory": "DeveloperApplication",
+          "operatingSystem": "Windows, macOS, Linux"
+        },
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "DevNotes+",
+          "url": "https://hiba-chaabnia.github.io/DevNotes-Plus/"
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "DevNotes+", "item": "https://hiba-chaabnia.github.io/DevNotes-Plus/" },
+          { "@type": "ListItem", "position": 2, "name": "Guide", "item": "https://hiba-chaabnia.github.io/DevNotes-Plus/guide/" },
+          { "@type": "ListItem", "position": 3, "name": "Organizing Notes with Tags, Branches and Reminders", "item": "https://hiba-chaabnia.github.io/DevNotes-Plus/guide/organizing-notes.html" }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+<header class="navbar">
+  <div class="container nav-container">
+    <a class="nav-logo" href="../">
+      <img class="logo-badge" src="../assets/icon.png" alt="">
+      DevNotes+
+    </a>
+    <nav class="nav-links">
+      <a class="nav-link" href="../#features">Features</a>
+      <a class="nav-link current" href="./">Guide</a>
+      <a class="nav-link" href="../#feedback">Feedback</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="btn btn-ghost" href="https://github.com/Hiba-Chaabnia/DevNotes-Plus"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.2 1.9 1.2 1.1 1.9 2.9 1.3 3.6 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.6 4.9 18.6 5.2 18.6 5.2c.7 1.7.3 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3"/></svg><span>View on GitHub</span></a>
+      <a class="btn btn-primary" href="https://marketplace.visualstudio.com/items?itemName=HibaChaabnia.devnotes-plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Install for VS Code</span></a>
+    </div>
+  </div>
+</header>
+
+<main class="container guide-shell">
+  <aside class="guide-sidebar">
+    <p class="sb-heading">User guide</p>
+    <ol>
+      <li><a href="./">Overview</a></li>
+      <li><a href="getting-started.html">Getting started</a></li>
+      <li><a href="anchoring-notes-to-code.html">Anchoring notes to code</a></li>
+      <li><a href="organizing-notes.html" aria-current="page">Organizing notes</a></li>
+      <li><a href="claude-code-mcp.html">Claude Code & MCP</a></li>
+      <li><a href="team-sharing.html">Sharing with your team</a></li>
+      <li><a href="file-format.html">File format & storage</a></li>
+    </ol>
+  </aside>
+
+  <article class="guide-body">
+    <p class="breadcrumb"><a href="../">DevNotes+</a><span>/</span><a href="./">Guide</a><span>/</span>Organizing notes</p>
+    <h1>Organizing notes</h1>
+    <p class="guide-lede">Tags, branch scoping, reminders, starring and archiving. The tools that keep a note list useful once it stops being a note list of three.</p>
+<h2>Tags</h2>
+
+    <p>Tags are coloured pills you attach to a note, and the main way you filter the sidebar. Five ship by default:</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Tag</th><th>Colour</th><th>Icon</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Idea</td><td>Yellow</td><td>Lightbulb</td></tr>
+          <tr><td>Todo</td><td>Blue</td><td>ListTodo</td></tr>
+          <tr><td>Bug</td><td>Red</td><td>Bug</td></tr>
+          <tr><td>Meeting</td><td>Lavender</td><td>Presentation</td></tr>
+          <tr><td>Reference</td><td>Green</td><td>BookMarked</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>None of them are fixed. You can rename them, recolour them with any hex value, swap the icon for a different <a href="https://lucide.dev/icons/">Lucide</a> one, delete the ones you do not use, reorder them, and add your own.</p>
+
+    <p>Your tag set lives in <code>.devnotes/tags.json</code>, and unlike your notes it is committed to git — so a team working in the same repo shares one vocabulary rather than five personal ones. See <a href="team-sharing.html">sharing with your team</a>.</p>
+
+    <h2>Branch scoping</h2>
+
+    <p>A note can be scoped to a git branch, in which case it only appears in the sidebar while you are on that branch. Notes with no branch set are visible everywhere.</p>
+
+    <p>This is the feature that stops a long-lived project's note list turning into an archaeological dig. Notes about the refactor you are halfway through belong to that branch; notes about the project as a whole do not.</p>
+
+    <div class="callout callout-note">
+      <span class="callout-label">Note</span>
+      <p>Branch scoping is a display filter, not a storage mechanism. The note file stays in <code>.devnotes/</code> regardless of which branch you are on, and the branch name is recorded in the note's frontmatter. Switching branches does not move or delete anything.</p>
+    </div>
+
+    <h2>Reminders</h2>
+
+    <p>Set a due date on any note and DevNotes+ will nudge you when it comes round. Overdue notes are flagged in the status bar, and a VS Code notification fires when the time arrives, offering four choices:</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Action</th><th>Effect</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Open</td><td>Opens the note in the editor. The reminder stays set.</td></tr>
+          <tr><td>Snooze 1h</td><td>Pushes the reminder forward one hour.</td></tr>
+          <tr><td>Snooze tomorrow</td><td>Moves it to 9:00 AM the next day.</td></tr>
+          <tr><td>Dismiss</td><td>Clears the reminder entirely.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Closing the notification without choosing anything snoozes it for an hour, so a reminder you ignore does not re-fire a minute later.</p>
+
+    <div class="callout callout-warn">
+      <span class="callout-label">Reminders need VS Code open</span>
+      <p>The check runs once a minute inside the extension. If VS Code is closed when a reminder comes due, it fires the next time you open the workspace — it is not a background service and cannot notify you when the editor is not running.</p>
+    </div>
+
+    <h2>Starring and archiving</h2>
+
+    <p><strong>Starring</strong> pins a note to your attention — it is a personal marker you can filter by, useful for the two or three things you are actually working on today.</p>
+
+    <p><strong>Archiving</strong> hides a note from the main list without deleting it. Archived notes stop being counted in the status bar's <strong>notes here</strong> total and are excluded from Claude Code's default queries, but the file stays on disk and you can filter them back into view whenever you want.</p>
+
+    <p>Archive is the right answer for a note that is finished but worth keeping. Deleting is for notes that were a mistake.</p>
+
+    <h2>Search and filter</h2>
+
+    <p>The sidebar's search box matches note titles and body text. Alongside it you can filter by tag, by branch scope, and by starred or archived state, and combine those with the search term.</p>
+
+    <h2>Templates</h2>
+
+    <p>Six templates ship with DevNotes+, each pre-tagged so a new note lands in the right filter straight away:</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Template</th><th>Sections</th><th>Tag</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Bug Report</td><td>Steps to Reproduce, Expected Behavior, Actual Behavior, Environment</td><td>Bug</td></tr>
+          <tr><td>ADR</td><td>Context, Decision, Consequences</td><td>Reference</td></tr>
+          <tr><td>Meeting Notes</td><td>Attendees, Decisions, Action Items</td><td>Meeting</td></tr>
+          <tr><td>Standup</td><td>Done, Doing, Blocked</td><td>Todo</td></tr>
+          <tr><td>Feature Spec</td><td>Goal, Acceptance Criteria, Notes, Open Questions</td><td>Idea</td></tr>
+          <tr><td>Code Review</td><td>What to Check, Findings, Decision</td><td>Reference</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>You can add your own templates too. Custom templates are stored in <code>.devnotes/templates.json</code>.</p>
+
+    <h2>Linking notes to each other</h2>
+
+    <p>Notes can reference other notes, which is how a spec ends up connected to the bug that prompted it. The links are stored on the note and are followed from the card.</p>
+
+    <h2>GitHub issues and pull requests</h2>
+
+    <p>Connect a GitHub account from the <strong>Set up integrations</strong> banner in the sidebar, or later from <strong>Integrations</strong> in the <strong>&#8943;</strong> overflow menu beside the search box. DevNotes+ uses VS Code's built-in GitHub authentication, so there is no personal access token to create or paste. The same row disconnects the account once it is linked.</p>
+
+    <p>Once connected you can:</p>
+
+    <ul>
+      <li><strong>Link an issue or PR</strong> by pasting its URL onto a note. The card then shows its live status — open, closed or merged.</li>
+      <li><strong>Create an issue from a note</strong>, turning something you wrote for yourself into something the team can see.</li>
+    </ul>
+
+    <h2>Getting notes out</h2>
+
+    <p>Two export routes, both available for a single note or for everything at once:</p>
+
+    <ul>
+      <li><strong>HTML</strong> — a styled, self-contained file with images embedded, suitable for sending to someone who does not use VS Code.</li>
+      <li><strong>Copy to clipboard</strong> — Markdown, ready to paste into Slack, a PR description, an issue, or anywhere else. Images cannot travel through the clipboard, so DevNotes+ warns you before copying a note that has them.</li>
+    </ul>
+
+    <p>Both are on the <strong>DevNotes: Export Note</strong> and <strong>DevNotes: Export All Notes</strong> commands. And because notes are already plain Markdown on disk, exporting is a convenience rather than an escape hatch — see <a href="file-format.html">the file format</a>.</p>
+    <nav class="next-nav">
+      <a href="anchoring-notes-to-code.html"><span class="dir">Previous</span><span class="t">Anchoring notes to code</span></a>
+      <a href="claude-code-mcp.html"><span class="dir">Next</span><span class="t">Claude Code & MCP</span></a>
+    </nav>
+  </article>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <img class="logo-badge" src="../assets/icon.png" alt="">
+        DevNotes+
+      </div>
+      <nav class="footer-links">
+        <a href="../">Home</a>
+        <a href="./">Guide</a>
+        <a href="https://marketplace.visualstudio.com/items?itemName=HibaChaabnia.devnotes-plus">VS Code Marketplace</a>
+        <a href="https://open-vsx.org/extension/HibaChaabnia/devnotes-plus">Open VSX</a>
+        <a href="https://github.com/Hiba-Chaabnia/DevNotes-Plus">GitHub</a>
+        <a href="https://github.com/Hiba-Chaabnia/DevNotes-Plus/issues">Report an issue</a>
+      </nav>
+    </div>
+    <p class="footer-legal">
+      DevNotes+ is free and open source under the AGPL-3.0 licence. Built by Hiba Chaabnia.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
