@@ -23,7 +23,6 @@ And because DevNotes+ is also *an MCP server*, AI assistants like Claude Code ca
 3. Press `Ctrl+Alt+Q` (`Cmd+Alt+Q` on Mac) to capture your first note — if an editor is focused, the note is automatically linked to that file and line.
 4. Click the note body in the sidebar to edit it inline, or click **Open in editor** for the full rich-text editor.
 
-
 ## Features
 
 ### Notes
@@ -83,18 +82,18 @@ All notes are private by default (gitignored). To share a note, toggle **Share t
 
 <video src="https://github.com/user-attachments/assets/f9da3926-c610-4cbd-8108-5f199f59e7e6" controls></video>
 
-Connect a GitHub account from the sidebar settings panel (uses VS Code's built-in GitHub auth — no personal access token needed):
+Connect a GitHub account from the **Set up integrations** banner in the sidebar, or later from **Integrations** in the `⋯` overflow menu beside the search box (uses VS Code's built-in GitHub auth — no personal access token needed):
 
 - **Link a PR or issue** — paste a GitHub URL to attach it to a note; status (open, merged, closed) is displayed on the card
 - **Create an issue** — convert any note into a GitHub issue directly from the overflow menu
 
 ### Claude Code / MCP
 
-Register DevNotes+ as an MCP server so Claude Code can interact with your notes from the conversation:
+Register DevNotes+ as an MCP server so Claude Code can interact with your notes from the conversation. Three ways in:
 
-```
-Command Palette → DevNotes: Connect to Claude Code (Register MCP Server)
-```
+- **Set up integrations** — the banner shown in the sidebar on a fresh install; click **Register MCP server**
+- **Integrations** in the `⋯` overflow menu beside the search box — reopens that banner at any time, even after "Never show again"
+- **Command Palette** → `DevNotes: Connect to Claude Code (Register MCP Server)`
 
 Then restart Claude Code. Claude can list notes, read content, create and update notes, search, append, and complete todos — all attributed in the Activity feed.
 
