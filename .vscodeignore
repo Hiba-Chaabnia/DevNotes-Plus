@@ -1,4 +1,5 @@
 .vscode/**
+.devnotes/**
 .vscode-test/**
 .claude/**
 src/**
