@@ -85,14 +85,18 @@ TEMPLATE = """<!DOCTYPE html>
   <meta property="og:description" content="{description}">
   <meta property="og:type" content="article">
   <meta property="og:url" content="{canonical}">
-  <meta property="og:image" content="{base}assets/icon.png">
-  <meta property="og:image:alt" content="The DevNotes+ icon">
+  <meta property="og:image" content="{base}assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:alt" content="DevNotes+ — the note panel your editor was missing">
   <meta property="og:locale" content="en_US">
 
-  <meta name="twitter:card" content="summary">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{title} — DevNotes+">
   <meta name="twitter:description" content="{description}">
-  <meta name="twitter:image" content="{base}assets/icon.png">
+  <meta name="twitter:image" content="{base}assets/og-image.png">
+  <meta name="twitter:image:alt" content="DevNotes+ — the note panel your editor was missing">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
