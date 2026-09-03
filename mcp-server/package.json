@@ -1,6 +1,6 @@
 {
   "name": "devnotes-mcp",
-  "version": "1.0.0",
+  "version": "0.1.3",
   "description": "MCP server for DevNotes+ — exposes project notes as tools, resources and prompts for Claude Code.",
   "license": "AGPL-3.0",
   "author": "Hiba Chaabnia",
