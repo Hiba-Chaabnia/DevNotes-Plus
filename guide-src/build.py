@@ -12,6 +12,7 @@ Editing docs/guide/*.html directly will be overwritten on the next run.
 """
 
 import io
+import json
 import os
 import re
 import sys
@@ -314,10 +315,29 @@ def write_sitemap(today):
     return len(urls)
 
 
+def sync_landing_version():
+    """Keeps the landing page's JSON-LD softwareVersion in step with package.json."""
+    pkg = os.path.join(ROOT, 'package.json')
+    version = json.load(io.open(pkg, encoding='utf-8'))['version']
+
+    landing = os.path.join(ROOT, 'docs', 'index.html')
+    html = io.open(landing, encoding='utf-8').read()
+    patched, n = re.subn(r'("softwareVersion":\s*")[^"]*(")',
+                         lambda m: m.group(1) + version + m.group(2), html)
+    if n != 1:
+        raise SystemExit('expected one softwareVersion in docs/index.html, found %d' % n)
+    if patched != html:
+        io.open(landing, 'w', encoding='utf-8', newline='\n').write(patched)
+    return version, patched != html
+
+
 if __name__ == '__main__':
     pages, today = build()
     count = write_sitemap(today)
+    version, changed = sync_landing_version()
     print('built %d guide pages into docs/guide/' % len(pages))
     for slug, size in pages:
         print('  %-28s %6d bytes' % (slug + '.html', size))
     print('sitemap.xml rewritten with %d urls' % count)
+    print('landing JSON-LD softwareVersion %s (%s)'
+          % (version, 'updated' if changed else 'already current'))
