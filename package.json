@@ -141,6 +141,11 @@
         "command": "devnotesPlus.focusSidebar",
         "title": "Open DevNotes Sidebar",
         "category": "DevNotes"
+      },
+      {
+        "command": "devnotesPlus.sendFeedback",
+        "title": "Send Feedback",
+        "category": "DevNotes"
       }
     ],
     "keybindings": [

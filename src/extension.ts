@@ -12,6 +12,7 @@ import { runExport } from './controllers/ExportController';
 import { detectProjectIdentity, getCurrentBranch, getGitUser, getLocalBranches } from './services/GitDetector';
 import { registerDevNotesMcp, isClaudeCodeInstalled, isMcpRegistered, isMcpRegisteredAsync } from './services/McpRegistration';
 import { StatusBarController } from './controllers/StatusBarController';
+import { promptForFeedback } from './services/Feedback';
 
 // ─── Activation ──────────────────────────────────────────────────────────────
 
@@ -341,6 +342,10 @@ async function _activate(context: vscode.ExtensionContext): Promise<void> {
       const notes = noteIds.map(id => storage.getNote(id)).filter((n): n is import('./services/NoteStorage').Note => !!n);
       return runExport(notes, devnotesDir);
     })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('devnotesPlus.sendFeedback', () => promptForFeedback(context))
   );
 
   // Register the DevNotes MCP server with Claude Code (~/.claude/mcp.json)

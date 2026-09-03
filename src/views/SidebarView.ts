@@ -44,6 +44,7 @@ type ToExt =
   | { type: 'archiveNote'; id: string }
   | { type: 'unarchiveNote'; id: string }
   | { type: 'registerMcp' }
+  | { type: 'sendFeedback' }
   | { type: 'createGitHubIssue'; noteId: string }
   | { type: 'linkGitHubPR';     noteId: string }
   | { type: 'bulkArchive';    noteIds: string[] }
@@ -795,6 +796,10 @@ export class SidebarView implements vscode.WebviewViewProvider {
 
       case 'registerMcp':
         vscode.commands.executeCommand('devnotesPlus.registerMcp');
+        break;
+
+      case 'sendFeedback':
+        vscode.commands.executeCommand('devnotesPlus.sendFeedback');
         break;
 
       case 'bannerDismiss':
@@ -1779,9 +1784,16 @@ export class SidebarView implements vscode.WebviewViewProvider {
   .note-card-header {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: space-between;
     padding: 6px 10px;
     border-bottom: 1px solid var(--vscode-panel-border);
+  }
+
+  .note-card-heading {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    color: var(--vscode-descriptionForeground);
   }
 
   .note-card-close {
@@ -2456,6 +2468,7 @@ export class SidebarView implements vscode.WebviewViewProvider {
 <div class="note-card-overlay" id="note-card-overlay">
   <div class="note-card" id="note-card">
     <div class="note-card-header">
+      <span class="note-card-heading">New note</span>
       <button class="note-card-close" id="btn-cancel-new" title="Cancel">${svgIcon(ALL_LUCIDE_NODES['X'], 12)}</button>
     </div>
     <input class="note-card-title" id="new-title" type="text" placeholder="Note title…" maxlength="120" autocomplete="off">
@@ -2548,6 +2561,10 @@ export class SidebarView implements vscode.WebviewViewProvider {
   <button class="ovf-item" id="btn-integrations">
     <span class="ovf-icon">${svgIcon(ALL_LUCIDE_NODES['Settings'], 14)}</span>
     <span class="ovf-label">Integrations</span>
+  </button>
+  <button class="ovf-item" id="btn-feedback">
+    <span class="ovf-icon">${svgIcon(ALL_LUCIDE_NODES['MessageSquare'], 14)}</span>
+    <span class="ovf-label">Send feedback</span>
   </button>
 </div>
 
@@ -2771,6 +2788,11 @@ export class SidebarView implements vscode.WebviewViewProvider {
     setupGithubRow.classList.toggle('done', lastGhConnected);
     setupGithubRow.classList.toggle('disconnectable', lastGhConnected);
     setupMcpRow.classList.toggle('done', lastMcpRegistered);
+    overflowMenu.classList.remove('open');
+  });
+
+  document.getElementById('btn-feedback').addEventListener('click', () => {
+    vscode.postMessage({ type: 'sendFeedback' });
     overflowMenu.classList.remove('open');
   });
 

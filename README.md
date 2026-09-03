@@ -137,6 +137,8 @@ The full user guide lives on the [DevNotes+ website](https://hiba-chaabnia.githu
 
 ## Issues, Feature Requests & Contributions
 
-Found a bug, hit an edge case, or have an idea for something DevNotes+ should do? [Open an issue](https://github.com/Hiba-Chaabnia/DevNotes-Plus/issues) — that's the best place to start. If a similar issue already exists, a 👍 on it helps us prioritize it.
+Found a bug, hit an edge case, or have an idea for something DevNotes+ should do? The quickest route is **Send feedback** in the `⋯` overflow menu beside the search box, or `DevNotes: Send Feedback` in the Command Palette — both open the right issue form with your DevNotes+, VS Code, and OS versions already filled in.
+
+You can also [open an issue](https://github.com/Hiba-Chaabnia/DevNotes-Plus/issues) directly. If a similar issue already exists, a 👍 on it helps us prioritize it.
 
 Pull requests are welcome too. Check the [contributing guide](CONTRIBUTING.md) before diving in.
