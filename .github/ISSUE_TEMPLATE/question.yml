@@ -1,0 +1,24 @@
+name: Question
+description: Ask how something in DevNotes+ works.
+title: "[Question] "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: The [user guide](https://hiba-chaabnia.github.io/DevNotes-Plus/guide/) covers setup, code linking, Claude Code MCP, team sharing, and the file format.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: What would you like to know?
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Environment
+      description: Filled in automatically when you open this from the extension's overflow menu.
+      render: text
+    validations:
+      required: false

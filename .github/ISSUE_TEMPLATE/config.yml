@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: User guide
+    url: https://hiba-chaabnia.github.io/DevNotes-Plus/guide/
+    about: Setup, code linking, Claude Code MCP, team sharing, and the on-disk file format.
