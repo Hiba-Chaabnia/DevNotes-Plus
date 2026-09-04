@@ -90,3 +90,38 @@ export function githubCreateIssue(
     req.end();
   });
 }
+
+/** Stars a repo for the authenticated user. Idempotent — already-starred also returns 204. */
+export function githubStarRepo(
+  token: string,
+  owner: string,
+  repo : string,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      {
+        hostname: 'api.github.com',
+        path    : `/user/starred/${owner}/${repo}`,
+        method  : 'PUT',
+        headers : {
+          'Authorization'        : `Bearer ${token}`,
+          'Accept'               : 'application/vnd.github+json',
+          // GitHub rejects a bodyless PUT without it
+          'Content-Length'       : 0,
+          'User-Agent'           : 'DevNotes-VSCode',
+          'X-GitHub-Api-Version' : '2022-11-28',
+        },
+      },
+      res => {
+        let data = '';
+        res.on('data', (chunk: Buffer) => { data += chunk; });
+        res.on('end', () => {
+          if (res.statusCode === 204) resolve();
+          else reject(new Error(`GitHub API returned ${res.statusCode}: ${data}`));
+        });
+      }
+    );
+    req.on('error', reject);
+    req.end();
+  });
+}

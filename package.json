@@ -146,6 +146,11 @@
         "command": "devnotesPlus.sendFeedback",
         "title": "Send Feedback",
         "category": "DevNotes"
+      },
+      {
+        "command": "devnotesPlus.starOnGitHub",
+        "title": "Star on GitHub",
+        "category": "DevNotes"
       }
     ],
     "keybindings": [

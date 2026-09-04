@@ -13,6 +13,7 @@ import { detectProjectIdentity, getCurrentBranch, getGitUser, getLocalBranches }
 import { registerDevNotesMcp, isClaudeCodeInstalled, isMcpRegistered, isMcpRegisteredAsync } from './services/McpRegistration';
 import { StatusBarController } from './controllers/StatusBarController';
 import { promptForFeedback } from './services/Feedback';
+import { starRepository, countNoteAndMaybePrompt } from './services/Support';
 
 // ─── Activation ──────────────────────────────────────────────────────────────
 
@@ -279,6 +280,7 @@ async function _activate(context: vscode.ExtensionContext): Promise<void> {
         branch,
         owner  : currentUser,
       });
+      void countNoteAndMaybePrompt(context);
       sidebar.push();
       gutterController.refresh();
       statusBar.refresh();
@@ -346,6 +348,10 @@ async function _activate(context: vscode.ExtensionContext): Promise<void> {
 
   context.subscriptions.push(
     vscode.commands.registerCommand('devnotesPlus.sendFeedback', () => promptForFeedback(context))
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('devnotesPlus.starOnGitHub', () => starRepository(context))
   );
 
   // Register the DevNotes MCP server with Claude Code (~/.claude/mcp.json)
