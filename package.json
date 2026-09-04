@@ -66,6 +66,16 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "DevNotes+",
+      "properties": {
+        "devnotesPlus.checkForUpdates": {
+          "type": "boolean",
+          "default": true,
+          "description": "Check once a day for a new DevNotes+ release and offer to install it. Skipped when VS Code updates extensions automatically."
+        }
+      }
+    },
     "viewsContainers": {
       "activitybar": [
         {

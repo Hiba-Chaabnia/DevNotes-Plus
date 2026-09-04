@@ -14,6 +14,7 @@ import { registerDevNotesMcp, isClaudeCodeInstalled, isMcpRegistered, isMcpRegis
 import { StatusBarController } from './controllers/StatusBarController';
 import { promptForFeedback } from './services/Feedback';
 import { starRepository, countNoteAndMaybePrompt } from './services/Support';
+import { checkForUpdate } from './services/UpdateCheck';
 
 // ─── Activation ──────────────────────────────────────────────────────────────
 
@@ -31,6 +32,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 }
 
 async function _activate(context: vscode.ExtensionContext): Promise<void> {
+  void checkForUpdate(context);
+
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
 
   if (!workspaceRoot) {
