@@ -4,6 +4,18 @@ All notable changes to DevNotes+ are documented here. This project follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] — 2026-09-04
+
+### Added
+
+- **Star on GitHub** in the sidebar `⋯` overflow menu and as `DevNotes: Star on GitHub` in the Command Palette. It stars the repository through your GitHub account after the standard VS Code sign-in prompt, and opens the repository page instead if you decline. The menu entry disappears once you have starred.
+- A one-time prompt, shown after your tenth note, offering to star the repository or leave a review. It never reappears, whichever you choose.
+- An update notification for the users who have VS Code's automatic extension updates turned off. At most once a day, DevNotes+ checks the registry it was installed from and, when a newer release exists, offers to install it, open the release notes, or skip that version. Turn it off with the new `devnotesPlus.checkForUpdates` setting.
+
+### Changed
+
+- Trimmed the Marketplace keywords to the terms that actually describe the extension, with the near-duplicates removed.
+
 ## [0.1.3] — 2026-09-03
 
 ### Added
